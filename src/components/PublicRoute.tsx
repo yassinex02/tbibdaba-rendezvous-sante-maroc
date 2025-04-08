@@ -3,6 +3,7 @@ import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Loading from './Loading';
 import { useEffect } from 'react';
+import { LoadingState } from './layout/AppLayout';
 
 const PublicRoute = () => {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -25,7 +26,11 @@ const PublicRoute = () => {
   }, []);
 
   if (isLoading) {
-    return <Loading />;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingState text="Vérification de votre session..." count={1} />
+      </div>
+    );
   }
 
   if (isAuthenticated) {

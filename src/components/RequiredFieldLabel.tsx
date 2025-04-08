@@ -8,9 +8,11 @@ interface RequiredFieldLabelProps {
 
 const RequiredFieldLabel = ({ children, required = true }: RequiredFieldLabelProps) => {
   return (
-    <div className="flex items-center gap-1">
-      <span>{children}</span>
-      {required && <span className="text-red-500">*</span>}
+    <div className="flex items-center gap-1 mb-1">
+      <span className="text-sm font-medium text-gray-700">{children}</span>
+      {required && (
+        <span className="text-red-500 font-bold" aria-label="Champ obligatoire">*</span>
+      )}
     </div>
   );
 };

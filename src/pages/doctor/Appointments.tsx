@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Search, Filter, MoreHorizontal, CheckCircle, AlertCircle, Clock, X } from 'lucide-react';
+import { Loader2, Search, Filter, MoreHorizontal, CheckCircle, AlertCircle, Clock, X, Plus } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { doctorAppointments } from '../../lib/mock-data';
@@ -133,8 +132,14 @@ const DoctorAppointments = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
+  const handleCreateAppointment = () => {
+    toast({
+      title: "Nouveau rendez-vous",
+      description: "Fonctionnalité en cours de développement",
+    });
+  };
+
   useEffect(() => {
-    // Simulate API call
     const fetchAppointments = async () => {
       await new Promise(resolve => setTimeout(resolve, 1000));
       setAppointments(doctorAppointments);
@@ -148,12 +153,10 @@ const DoctorAppointments = () => {
   useEffect(() => {
     let result = [...appointments];
     
-    // Apply status filter
     if (filter !== 'all') {
       result = result.filter(appointment => appointment.status === filter);
     }
     
-    // Apply search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       result = result.filter(appointment => 
@@ -162,7 +165,6 @@ const DoctorAppointments = () => {
       );
     }
     
-    // Apply date filter
     if (selectedDate) {
       const dateString = selectedDate.toISOString().split('T')[0];
       result = result.filter(appointment => appointment.date === dateString);
@@ -178,7 +180,6 @@ const DoctorAppointments = () => {
     
     setAppointments(updatedAppointments);
     
-    // Show toast notification
     const appointment = appointments.find(a => a.id === id);
     const statusMessages = {
       completed: `Rendez-vous avec ${appointment?.patientName} marqué comme terminé`,
@@ -208,7 +209,8 @@ const DoctorAppointments = () => {
               Gérez vos rendez-vous et votre planning
             </p>
           </div>
-          <Button>
+          <Button onClick={handleCreateAppointment} className="bg-tbibdaba-teal hover:bg-tbibdaba-teal/90">
+            <Plus className="h-4 w-4 mr-2" />
             Nouveau rendez-vous
           </Button>
         </div>

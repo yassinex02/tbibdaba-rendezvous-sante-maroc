@@ -10,6 +10,8 @@ import { useAuth } from '../contexts/AuthContext';
 import AuthLayout from '../components/layout/AuthLayout';
 import { Loader2 } from 'lucide-react';
 import { cities } from '../lib/mock-data';
+import RequiredFieldLabel from '../components/RequiredFieldLabel';
+import { toast } from '@/components/ui/use-toast';
 
 const RegisterPatient = () => {
   const [formData, setFormData] = useState({
@@ -23,6 +25,8 @@ const RegisterPatient = () => {
     birthdate: '',
     gender: '',
     agreeTos: false,
+    insuranceProvider: '',
+    insuranceNumber: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -86,12 +90,24 @@ const RegisterPatient = () => {
       newErrors.gender = 'Le genre est requis';
     }
     
+    if (!formData.phone.trim()) {
+      newErrors.phone = 'Le numéro de téléphone est requis';
+    }
+    
+    if (!formData.birthdate) {
+      newErrors.birthdate = 'La date de naissance est requise';
+    }
+    
     if (!formData.agreeTos) {
       newErrors.agreeTos = 'Vous devez accepter les conditions';
     }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSearchDoctor = () => {
+    navigate('/patient/search');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -108,10 +124,19 @@ const RegisterPatient = () => {
       const success = await register(userData, 'patient');
       
       if (success) {
+        toast({
+          title: "Inscription réussie",
+          description: "Votre compte a été créé avec succès",
+        });
         navigate('/patient/dashboard');
       }
     } catch (error) {
       console.error('Registration error:', error);
+      toast({
+        title: "Erreur d'inscription",
+        description: "Une erreur s'est produite lors de l'inscription",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -124,10 +149,19 @@ const RegisterPatient = () => {
       type="register"
       role="patient"
     >
+      <div className="mt-4 flex justify-center">
+        <Button 
+          onClick={handleSearchDoctor}
+          className="bg-tbibdaba-teal hover:bg-tbibdaba-teal/90 text-white"
+        >
+          Rechercher un médecin
+        </Button>
+      </div>
+
       <form onSubmit={handleSubmit} className="mt-8 space-y-6">
         <div className="space-y-4">
           <div>
-            <Label htmlFor="name">Nom Complet</Label>
+            <RequiredFieldLabel>Nom Complet</RequiredFieldLabel>
             <Input
               id="name"
               name="name"
@@ -141,7 +175,7 @@ const RegisterPatient = () => {
           </div>
           
           <div>
-            <Label htmlFor="email">Email</Label>
+            <RequiredFieldLabel>Email</RequiredFieldLabel>
             <Input
               id="email"
               name="email"
@@ -156,7 +190,7 @@ const RegisterPatient = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="password">Mot de passe</Label>
+              <RequiredFieldLabel>Mot de passe</RequiredFieldLabel>
               <Input
                 id="password"
                 name="password"
@@ -170,7 +204,7 @@ const RegisterPatient = () => {
             </div>
             
             <div>
-              <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
+              <RequiredFieldLabel>Confirmer le mot de passe</RequiredFieldLabel>
               <Input
                 id="confirmPassword"
                 name="confirmPassword"
@@ -185,7 +219,7 @@ const RegisterPatient = () => {
           </div>
           
           <div>
-            <Label htmlFor="phone">Téléphone</Label>
+            <RequiredFieldLabel>Téléphone</RequiredFieldLabel>
             <Input
               id="phone"
               name="phone"
@@ -193,13 +227,14 @@ const RegisterPatient = () => {
               value={formData.phone}
               onChange={handleChange}
               placeholder="0600000000"
-              className="mt-1"
+              className={`mt-1 ${errors.phone ? 'border-red-500' : ''}`}
             />
+            {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="city">Ville</Label>
+              <RequiredFieldLabel>Ville</RequiredFieldLabel>
               <Select
                 value={formData.city}
                 onValueChange={(value) => handleSelectChange('city', value)}
@@ -207,7 +242,7 @@ const RegisterPatient = () => {
                 <SelectTrigger className={`mt-1 ${errors.city ? 'border-red-500' : ''}`}>
                   <SelectValue placeholder="Sélectionnez votre ville" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[200px] overflow-y-auto">
                   {cities.map((city) => (
                     <SelectItem key={city} value={city}>{city}</SelectItem>
                   ))}
@@ -217,7 +252,7 @@ const RegisterPatient = () => {
             </div>
             
             <div>
-              <Label htmlFor="gender">Genre</Label>
+              <RequiredFieldLabel>Genre</RequiredFieldLabel>
               <Select
                 value={formData.gender}
                 onValueChange={(value) => handleSelectChange('gender', value)}
@@ -236,15 +271,16 @@ const RegisterPatient = () => {
           </div>
           
           <div>
-            <Label htmlFor="birthdate">Date de naissance</Label>
+            <RequiredFieldLabel>Date de naissance</RequiredFieldLabel>
             <Input
               id="birthdate"
               name="birthdate"
               type="date"
               value={formData.birthdate}
               onChange={handleChange}
-              className="mt-1"
+              className={`mt-1 ${errors.birthdate ? 'border-red-500' : ''}`}
             />
+            {errors.birthdate && <p className="text-red-500 text-xs mt-1">{errors.birthdate}</p>}
           </div>
           
           <div>
@@ -258,6 +294,39 @@ const RegisterPatient = () => {
               placeholder="Votre adresse"
               className="mt-1"
             />
+          </div>
+          
+          {/* Insurance Information */}
+          <div className="pt-2">
+            <h3 className="text-lg font-medium">Informations d'assurance (Optionnel)</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+              <div>
+                <Label htmlFor="insuranceProvider">Assureur</Label>
+                <Input
+                  id="insuranceProvider"
+                  name="insuranceProvider"
+                  type="text"
+                  value={formData.insuranceProvider}
+                  onChange={handleChange}
+                  placeholder="Nom de votre assureur"
+                  className="mt-1"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="insuranceNumber">Numéro d'assurance</Label>
+                <Input
+                  id="insuranceNumber"
+                  name="insuranceNumber"
+                  type="text"
+                  value={formData.insuranceNumber}
+                  onChange={handleChange}
+                  placeholder="Numéro de votre assurance"
+                  className="mt-1"
+                />
+              </div>
+            </div>
           </div>
           
           <div className="flex items-start space-x-2">
@@ -275,7 +344,7 @@ const RegisterPatient = () => {
                 htmlFor="agreeTos"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
-                J'accepte les <a href="#" className="text-tbibdaba-teal hover:underline">conditions d'utilisation</a> et la <a href="#" className="text-tbibdaba-teal hover:underline">politique de confidentialité</a>
+                J'accepte les <a href="#" className="text-tbibdaba-teal hover:underline">conditions d'utilisation</a> et la <a href="#" className="text-tbibdaba-teal hover:underline">politique de confidentialité</a> <span className="text-red-500">*</span>
               </label>
               {errors.agreeTos && <p className="text-red-500 text-xs">{errors.agreeTos}</p>}
             </div>
@@ -296,6 +365,10 @@ const RegisterPatient = () => {
             'S\'inscrire'
           )}
         </Button>
+        
+        <p className="text-center text-xs text-gray-500 mt-4">
+          <span className="text-red-500">*</span> Champs obligatoires
+        </p>
       </form>
     </AuthLayout>
   );

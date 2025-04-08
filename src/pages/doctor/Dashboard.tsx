@@ -8,6 +8,7 @@ import { Loader2, Calendar, Users, DollarSign, TrendingUp, Clock, ArrowRight } f
 import { useAuth } from '../../contexts/AuthContext';
 import { doctorAppointments, weeklyStats } from '../../lib/mock-data';
 import { useNavigate } from 'react-router-dom';
+import { toast } from '@/components/ui/use-toast';
 
 const DashboardCard = ({ title, value, description, icon, color }: {
   title: string;
@@ -48,6 +49,14 @@ const DoctorDashboard = () => {
 
   const isPremium = user?.subscription === 'premium' || user?.subscription === 'enterprise';
 
+  const handleCreateAppointment = () => {
+    navigate('/doctor/appointments/new');
+    toast({
+      title: "Créer un rendez-vous",
+      description: "Fonctionnalité en cours de développement",
+    });
+  };
+
   useEffect(() => {
     // Simulate API call
     const fetchAppointments = async () => {
@@ -79,6 +88,29 @@ const DoctorDashboard = () => {
     return new Date(dateString).toLocaleDateString('fr-FR', options);
   };
 
+  const EmptyAppointmentsMessage = () => (
+    <div className="text-center py-8 text-gray-500">
+      <Calendar className="h-10 w-10 mx-auto mb-4 text-gray-400" />
+      <p>Aucun rendez-vous prévu</p>
+      <Button 
+        variant="outline" 
+        className="mt-4"
+        onClick={handleCreateAppointment}
+      >
+        Créer un rendez-vous
+      </Button>
+    </div>
+  );
+
+  // Handle viewing appointment details
+  const handleViewAppointment = (id: string) => {
+    navigate(`/doctor/appointments/${id}`);
+    toast({
+      title: "Afficher les détails",
+      description: "Fonctionnalité en cours de développement",
+    });
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -90,14 +122,17 @@ const DoctorDashboard = () => {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Button className="bg-tbibdaba-teal hover:bg-tbibdaba-teal/90" onClick={handleCreateAppointment}>
+              Nouveau rendez-vous
+            </Button>
             {isPremium ? (
-              <Button className="bg-tbibdaba-teal hover:bg-tbibdaba-teal/90" onClick={() => navigate('/doctor/analytics')}>
-                Voir les analytiques avancées
+              <Button variant="outline" onClick={() => navigate('/doctor/analytics')}>
+                Voir les analytiques
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             ) : (
               <Button variant="outline" onClick={() => navigate('/pricing')}>
-                Mettre à niveau vers Premium
+                Mettre à niveau Premium
                 <TrendingUp className="ml-2 h-4 w-4" />
               </Button>
             )}
@@ -155,7 +190,7 @@ const DoctorDashboard = () => {
                   {todayAppointments.map((appointment) => (
                     <div 
                       key={appointment.id} 
-                      className={`p-4 rounded-lg border flex justify-between items-center ${
+                      className={`p-4 rounded-lg border flex flex-col md:flex-row justify-between items-start md:items-center ${
                         appointment.status === 'cancelled' ? 'bg-red-50 border-red-200' : 'bg-white'
                       }`}
                     >
@@ -177,6 +212,8 @@ const DoctorDashboard = () => {
                         variant={appointment.status === 'cancelled' ? "outline" : "default"}
                         size="sm"
                         disabled={appointment.status === 'cancelled'}
+                        onClick={() => handleViewAppointment(appointment.id)}
+                        className="mt-2 md:mt-0"
                       >
                         Voir détails
                       </Button>
@@ -184,10 +221,7 @@ const DoctorDashboard = () => {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <Calendar className="h-10 w-10 mx-auto mb-4 text-gray-400" />
-                  <p>Aucun rendez-vous prévu pour aujourd'hui</p>
-                </div>
+                <EmptyAppointmentsMessage />
               )}
 
               <div className="mt-6">
@@ -243,7 +277,7 @@ const DoctorDashboard = () => {
                 <Loader2 className="h-8 w-8 text-tbibdaba-teal animate-spin" />
               </div>
             ) : upcomingAppointments.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {upcomingAppointments.map((appointment) => (
                   <div 
                     key={appointment.id} 
@@ -260,7 +294,11 @@ const DoctorDashboard = () => {
                       <Button variant="outline" size="sm" className="flex-1">
                         Reporter
                       </Button>
-                      <Button size="sm" className="flex-1">
+                      <Button 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => handleViewAppointment(appointment.id)}
+                      >
                         Voir
                       </Button>
                     </div>
@@ -268,10 +306,7 @@ const DoctorDashboard = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-500">
-                <Calendar className="h-10 w-10 mx-auto mb-4 text-gray-400" />
-                <p>Aucun rendez-vous à venir</p>
-              </div>
+              <EmptyAppointmentsMessage />
             )}
           </CardContent>
         </Card>

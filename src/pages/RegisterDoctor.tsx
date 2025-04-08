@@ -9,8 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from '../contexts/AuthContext';
 import AuthLayout from '../components/layout/AuthLayout';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Upload } from 'lucide-react';
 import { cities, specialties } from '../lib/mock-data';
+import RequiredFieldLabel from '../components/RequiredFieldLabel';
+import { toast } from '@/components/ui/use-toast';
+import { AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const RegisterDoctor = () => {
   const [formData, setFormData] = useState({
@@ -25,7 +29,12 @@ const RegisterDoctor = () => {
     bio: '',
     education: '',
     license: '',
+    inpeCode: '',
     acceptTerms: false,
+    // New fields
+    licenseDocument: null as File | null,
+    identityDocument: null as File | null,
+    diplomaDocument: null as File | null,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,6 +52,21 @@ const RegisterDoctor = () => {
     // Clear error when field is edited
     if (errors[name]) {
       setErrors({ ...errors, [name]: '' });
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, files } = e.target;
+    if (files && files.length > 0) {
+      setFormData({
+        ...formData,
+        [name]: files[0]
+      });
+      
+      // Clear error when field is edited
+      if (errors[name]) {
+        setErrors({ ...errors, [name]: '' });
+      }
     }
   };
 
@@ -93,6 +117,22 @@ const RegisterDoctor = () => {
       newErrors.license = 'Le numéro de licence est requis';
     }
     
+    if (!formData.inpeCode.trim()) {
+      newErrors.inpeCode = 'Le code INPE est requis';
+    }
+    
+    if (!formData.licenseDocument) {
+      newErrors.licenseDocument = 'La copie de votre carte du Conseil de l\'ordre est requise';
+    }
+    
+    if (!formData.identityDocument) {
+      newErrors.identityDocument = 'Une pièce d\'identité est requise';
+    }
+    
+    if (!formData.diplomaDocument) {
+      newErrors.diplomaDocument = 'Une copie de vos diplômes est requise';
+    }
+    
     if (!formData.acceptTerms) {
       newErrors.acceptTerms = 'Vous devez accepter les conditions';
     }
@@ -111,18 +151,39 @@ const RegisterDoctor = () => {
     setIsSubmitting(true);
     
     try {
-      const { confirmPassword, acceptTerms, ...userData } = formData;
+      const { confirmPassword, acceptTerms, licenseDocument, identityDocument, diplomaDocument, ...userData } = formData;
+      
+      // In a real app, you would upload the documents and include their URLs
+      // For now, we'll just simulate the document upload
       const success = await register(userData, 'doctor');
       
       if (success) {
+        toast({
+          title: "Inscription réussie",
+          description: "Votre compte a été créé et est en attente de vérification. Vous recevrez un email lorsque votre compte sera activé.",
+        });
         navigate('/doctor/dashboard');
       }
     } catch (error) {
       console.error('Registration error:', error);
+      toast({
+        title: "Erreur d'inscription",
+        description: "Une erreur s'est produite lors de l'inscription",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  // Enhanced specialties list including Dentistry
+  const enhancedSpecialties = [
+    ...specialties,
+    'Dentiste',
+    'Chirurgien-dentiste',
+    'Orthodontiste',
+    'Pédodontiste'
+  ].sort();
 
   return (
     <AuthLayout 
@@ -131,13 +192,21 @@ const RegisterDoctor = () => {
       type="register"
       role="doctor"
     >
+      <Alert className="mt-4 bg-blue-50 border-blue-200">
+        <AlertCircle className="h-4 w-4 text-blue-600" />
+        <AlertTitle>Processus de vérification</AlertTitle>
+        <AlertDescription>
+          Votre compte sera soumis à vérification par notre équipe avant d'être activé. Veuillez fournir des documents valides.
+        </AlertDescription>
+      </Alert>
+
       <form onSubmit={handleSubmit} className="mt-8 space-y-6">
         <div className="space-y-4">
           {/* Personal Information */}
           <h3 className="text-lg font-medium text-gray-900">Informations personnelles</h3>
           
           <div>
-            <Label htmlFor="name">Nom Complet</Label>
+            <RequiredFieldLabel>Nom Complet</RequiredFieldLabel>
             <Input
               id="name"
               name="name"
@@ -151,7 +220,7 @@ const RegisterDoctor = () => {
           </div>
           
           <div>
-            <Label htmlFor="email">Email Professionnel</Label>
+            <RequiredFieldLabel>Email Professionnel</RequiredFieldLabel>
             <Input
               id="email"
               name="email"
@@ -166,7 +235,7 @@ const RegisterDoctor = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="password">Mot de passe</Label>
+              <RequiredFieldLabel>Mot de passe</RequiredFieldLabel>
               <Input
                 id="password"
                 name="password"
@@ -180,7 +249,7 @@ const RegisterDoctor = () => {
             </div>
             
             <div>
-              <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
+              <RequiredFieldLabel>Confirmer le mot de passe</RequiredFieldLabel>
               <Input
                 id="confirmPassword"
                 name="confirmPassword"
@@ -195,7 +264,7 @@ const RegisterDoctor = () => {
           </div>
           
           <div>
-            <Label htmlFor="phone">Téléphone Professionnel</Label>
+            <RequiredFieldLabel>Téléphone Professionnel</RequiredFieldLabel>
             <Input
               id="phone"
               name="phone"
@@ -212,7 +281,7 @@ const RegisterDoctor = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="specialty">Spécialité</Label>
+              <RequiredFieldLabel>Spécialité</RequiredFieldLabel>
               <Select
                 value={formData.specialty}
                 onValueChange={(value) => handleSelectChange('specialty', value)}
@@ -220,8 +289,8 @@ const RegisterDoctor = () => {
                 <SelectTrigger className={`mt-1 ${errors.specialty ? 'border-red-500' : ''}`}>
                   <SelectValue placeholder="Sélectionnez votre spécialité" />
                 </SelectTrigger>
-                <SelectContent>
-                  {specialties.map((specialty) => (
+                <SelectContent className="max-h-[200px] overflow-y-auto">
+                  {enhancedSpecialties.map((specialty) => (
                     <SelectItem key={specialty} value={specialty}>{specialty}</SelectItem>
                   ))}
                 </SelectContent>
@@ -230,7 +299,7 @@ const RegisterDoctor = () => {
             </div>
             
             <div>
-              <Label htmlFor="license">Numéro de Licence</Label>
+              <RequiredFieldLabel>Numéro de Licence</RequiredFieldLabel>
               <Input
                 id="license"
                 name="license"
@@ -242,6 +311,21 @@ const RegisterDoctor = () => {
               />
               {errors.license && <p className="text-red-500 text-xs mt-1">{errors.license}</p>}
             </div>
+          </div>
+          
+          <div>
+            <RequiredFieldLabel>Code INPE</RequiredFieldLabel>
+            <Input
+              id="inpeCode"
+              name="inpeCode"
+              type="text"
+              value={formData.inpeCode}
+              onChange={handleChange}
+              placeholder="Votre code INPE"
+              className={`mt-1 ${errors.inpeCode ? 'border-red-500' : ''}`}
+            />
+            {errors.inpeCode && <p className="text-red-500 text-xs mt-1">{errors.inpeCode}</p>}
+            <p className="text-xs text-gray-500 mt-1">Le code d'Identifiant National des Professionnels de la Santé</p>
           </div>
           
           <div>
@@ -270,12 +354,74 @@ const RegisterDoctor = () => {
             />
           </div>
           
+          {/* Document Upload Section */}
+          <h3 className="text-lg font-medium text-gray-900 pt-4">Documents de vérification</h3>
+          
+          <div className="space-y-4">
+            <div>
+              <RequiredFieldLabel>Carte du Conseil de l'ordre</RequiredFieldLabel>
+              <div className="mt-1 flex items-center gap-4">
+                <Input
+                  id="licenseDocument"
+                  name="licenseDocument"
+                  type="file"
+                  onChange={handleFileChange}
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  className={`mt-1 ${errors.licenseDocument ? 'border-red-500' : ''}`}
+                />
+                <Button type="button" variant="outline" size="sm">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Parcourir
+                </Button>
+              </div>
+              {errors.licenseDocument && <p className="text-red-500 text-xs mt-1">{errors.licenseDocument}</p>}
+            </div>
+            
+            <div>
+              <RequiredFieldLabel>Diplôme(s)</RequiredFieldLabel>
+              <div className="mt-1 flex items-center gap-4">
+                <Input
+                  id="diplomaDocument"
+                  name="diplomaDocument"
+                  type="file"
+                  onChange={handleFileChange}
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  className={`mt-1 ${errors.diplomaDocument ? 'border-red-500' : ''}`}
+                />
+                <Button type="button" variant="outline" size="sm">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Parcourir
+                </Button>
+              </div>
+              {errors.diplomaDocument && <p className="text-red-500 text-xs mt-1">{errors.diplomaDocument}</p>}
+            </div>
+            
+            <div>
+              <RequiredFieldLabel>Pièce d'identité</RequiredFieldLabel>
+              <div className="mt-1 flex items-center gap-4">
+                <Input
+                  id="identityDocument"
+                  name="identityDocument"
+                  type="file"
+                  onChange={handleFileChange}
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  className={`mt-1 ${errors.identityDocument ? 'border-red-500' : ''}`}
+                />
+                <Button type="button" variant="outline" size="sm">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Parcourir
+                </Button>
+              </div>
+              {errors.identityDocument && <p className="text-red-500 text-xs mt-1">{errors.identityDocument}</p>}
+            </div>
+          </div>
+          
           {/* Location Information */}
           <h3 className="text-lg font-medium text-gray-900 pt-4">Adresse du cabinet</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="city">Ville</Label>
+              <RequiredFieldLabel>Ville</RequiredFieldLabel>
               <Select
                 value={formData.city}
                 onValueChange={(value) => handleSelectChange('city', value)}
@@ -283,7 +429,7 @@ const RegisterDoctor = () => {
                 <SelectTrigger className={`mt-1 ${errors.city ? 'border-red-500' : ''}`}>
                   <SelectValue placeholder="Sélectionnez votre ville" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[200px] overflow-y-auto">
                   {cities.map((city) => (
                     <SelectItem key={city} value={city}>{city}</SelectItem>
                   ))}
@@ -322,7 +468,7 @@ const RegisterDoctor = () => {
                 htmlFor="acceptTerms"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
-                J'accepte les <a href="#" className="text-tbibdaba-teal hover:underline">conditions d'utilisation</a>, la <a href="#" className="text-tbibdaba-teal hover:underline">politique de confidentialité</a> et je certifie être un professionnel de santé légalement autorisé à exercer au Maroc.
+                J'accepte les <a href="#" className="text-tbibdaba-teal hover:underline">conditions d'utilisation</a>, la <a href="#" className="text-tbibdaba-teal hover:underline">politique de confidentialité</a> et je certifie être un professionnel de santé légalement autorisé à exercer au Maroc. <span className="text-red-500">*</span>
               </label>
               {errors.acceptTerms && <p className="text-red-500 text-xs">{errors.acceptTerms}</p>}
             </div>
@@ -347,6 +493,10 @@ const RegisterDoctor = () => {
         <p className="text-center text-sm text-gray-600">
           En vous inscrivant, vous bénéficiez d'un essai gratuit de 30 jours. 
           Découvrez nos <a href="/pricing" className="text-tbibdaba-teal hover:underline">forfaits</a>.
+        </p>
+        
+        <p className="text-center text-xs text-gray-500 mt-4">
+          <span className="text-red-500">*</span> Champs obligatoires
         </p>
       </form>
     </AuthLayout>

@@ -1,13 +1,28 @@
 
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Loading from './Loading';
+import { useEffect } from 'react';
 
 const PublicRoute = () => {
   const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const from = location.state?.from?.pathname || 
                (user?.role === 'patient' ? '/patient/dashboard' : '/doctor/dashboard');
+
+  // Fix for browser back button
+  useEffect(() => {
+    const handlePopState = () => {
+      // Force reload to ensure proper navigation state
+      window.location.reload();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
 
   if (isLoading) {
     return <Loading />;

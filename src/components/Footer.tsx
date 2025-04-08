@@ -13,7 +13,7 @@ const Footer = () => {
           <div className="space-y-4">
             <div className="flex items-center">
               <img 
-                src="/public/lovable-uploads/c23064ce-de69-4585-b52e-15cf394c7966.png" 
+                src="/lovable-uploads/c23064ce-de69-4585-b52e-15cf394c7966.png" 
                 alt="TbibDaba Logo" 
                 className="h-10 w-auto"
               />

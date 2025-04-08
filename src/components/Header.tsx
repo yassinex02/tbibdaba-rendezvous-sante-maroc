@@ -45,7 +45,7 @@ const Header = () => {
           <div className="flex items-center">
             <Link to="/" className="flex items-center" onClick={closeMenu}>
               <img 
-                src="/public/lovable-uploads/c23064ce-de69-4585-b52e-15cf394c7966.png" 
+                src="/lovable-uploads/c23064ce-de69-4585-b52e-15cf394c7966.png" 
                 alt="TbibDaba Logo" 
                 className="h-10 w-auto"
               />

@@ -30,7 +30,7 @@ const AuthLayout = ({ children, title, subtitle, type, role }: AuthLayoutProps) 
         <div className="text-center">
           <Link to="/" className="inline-block">
             <img 
-              src="/public/lovable-uploads/c23064ce-de69-4585-b52e-15cf394c7966.png" 
+              src="/lovable-uploads/c23064ce-de69-4585-b52e-15cf394c7966.png" 
               alt="TbibDaba Logo" 
               className="h-14 w-auto mx-auto"
             />

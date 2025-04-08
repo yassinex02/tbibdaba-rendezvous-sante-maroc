@@ -25,6 +25,24 @@ const PublicRoute = () => {
     };
   }, []);
 
+  // Add custom transition effect when redirecting
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Add class to body for page transition
+      document.body.classList.add('page-exit');
+      
+      // Small delay before redirecting to allow for animation
+      const timer = setTimeout(() => {
+        navigate(from, { replace: true });
+      }, 100);
+      
+      return () => {
+        clearTimeout(timer);
+        document.body.classList.remove('page-exit');
+      };
+    }
+  }, [isAuthenticated, from, navigate]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -34,10 +52,14 @@ const PublicRoute = () => {
   }
 
   if (isAuthenticated) {
-    return <Navigate to={from} replace />;
+    return null; // Return null, the useEffect will handle navigation with transition
   }
 
-  return <Outlet />;
+  return (
+    <div className="page-enter page-enter-active">
+      <Outlet />
+    </div>
+  );
 };
 
 export default PublicRoute;

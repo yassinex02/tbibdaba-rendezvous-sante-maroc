@@ -112,6 +112,48 @@
       width: 100%;
     }
   }
+  
+  /* Shimmer animation */
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+  
+  /* Pulse animation */
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+  
+  /* Bounce animation */
+  @keyframes bounce {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+  
+  /* Scale animation */
+  @keyframes scale {
+    0% {
+      transform: scale(0.95);
+      opacity: 0.8;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
 }
 
 @layer components {
@@ -182,6 +224,141 @@
   }
   .page-exit-active {
     @apply opacity-0 transition-all duration-300;
+  }
+  
+  /* Doctor card styling */
+  .doctor-card {
+    @apply rounded-lg border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:shadow-md hover:border-tbibdaba-teal/30;
+  }
+  
+  .doctor-name {
+    @apply text-lg font-bold text-gray-900;
+  }
+  
+  .doctor-specialty {
+    @apply text-sm text-gray-600 font-medium;
+  }
+  
+  .doctor-location {
+    @apply text-xs flex items-center text-gray-500;
+  }
+  
+  .next-slot {
+    @apply text-xs bg-tbibdaba-light text-tbibdaba-teal py-1 px-2 rounded-full font-medium;
+  }
+  
+  /* Custom progress steps */
+  .steps-container {
+    @apply flex items-center w-full mb-6;
+  }
+  
+  .step {
+    @apply flex-1 relative;
+  }
+  
+  .step-circle {
+    @apply w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-sm text-gray-700 font-medium z-10 relative;
+  }
+  
+  .step-active .step-circle {
+    @apply bg-tbibdaba-teal text-white;
+  }
+  
+  .step-completed .step-circle {
+    @apply bg-green-600 text-white;
+  }
+  
+  .step-line {
+    @apply absolute top-4 -right-1/2 w-full h-0.5 bg-gray-200 -translate-y-1/2 z-0;
+  }
+  
+  .step-active .step-line, .step-completed .step-line {
+    @apply bg-tbibdaba-teal;
+  }
+  
+  .step-label {
+    @apply text-xs text-gray-500 text-center mt-1 absolute -left-1/4 right-0 w-[150%];
+  }
+  
+  /* Success metrics */
+  .success-metric {
+    @apply bg-gradient-to-r from-tbibdaba-light to-white p-4 rounded-lg shadow-sm border border-tbibdaba-teal/20;
+  }
+  
+  .success-metric-number {
+    @apply text-2xl md:text-3xl font-bold text-tbibdaba-teal;
+  }
+  
+  .success-metric-text {
+    @apply text-sm text-gray-600;
+  }
+  
+  /* Testimonial card */
+  .testimonial-card {
+    @apply bg-white rounded-lg shadow-sm p-6 border border-gray-100;
+  }
+  
+  .testimonial-quote {
+    @apply text-gray-600 italic mb-4 relative pl-4;
+  }
+  
+  .testimonial-quote::before {
+    @apply content-['"'] absolute left-0 top-0 text-tbibdaba-teal text-2xl font-serif;
+  }
+  
+  .testimonial-author {
+    @apply flex items-center;
+  }
+  
+  .testimonial-author-image {
+    @apply w-10 h-10 rounded-full mr-3 object-cover;
+  }
+  
+  .testimonial-author-name {
+    @apply text-sm font-medium;
+  }
+  
+  .testimonial-author-role {
+    @apply text-xs text-gray-500;
+  }
+  
+  /* User segment targeting */
+  .user-segment {
+    @apply p-4 rounded-lg border;
+  }
+  
+  .user-segment-urban {
+    @apply border-blue-200 bg-blue-50;
+  }
+  
+  .user-segment-rural {
+    @apply border-green-200 bg-green-50;
+  }
+  
+  .user-segment-title {
+    @apply text-sm font-medium mb-1;
+  }
+  
+  .user-segment-desc {
+    @apply text-xs text-gray-600;
+  }
+  
+  /* Loader animation */
+  .loading-dots {
+    @apply inline-flex items-center space-x-1;
+  }
+  
+  .loading-dots span {
+    @apply inline-block w-1.5 h-1.5 bg-current rounded-full;
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  
+  .loading-dots span:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+  
+  .loading-dots span:nth-child(3) {
+    animation-delay: 0.4s;
   }
 }
 

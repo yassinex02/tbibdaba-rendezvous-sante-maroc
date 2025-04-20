@@ -43,7 +43,7 @@ const ChatContext = createContext<ChatContextType>({
 });
 
 // Mock data for contacts based on appointments
-const generateContacts = (userId: string, userRole: string) => {
+const generateContacts = (userId: string, userRole: string): ChatContact[] => {
   // In a real app, this would fetch from an API based on the user's appointments
   if (userRole === 'doctor') {
     return [
@@ -51,7 +51,7 @@ const generateContacts = (userId: string, userRole: string) => {
         id: 'patient1',
         name: 'Mohammed Alami',
         avatar: 'https://randomuser.me/api/portraits/men/1.jpg',
-        role: 'patient',
+        role: 'patient' as const,
         lastMessage: 'Bonjour Docteur, comment allez-vous?',
         unread: 2,
       },
@@ -59,7 +59,7 @@ const generateContacts = (userId: string, userRole: string) => {
         id: 'patient2',
         name: 'Fatima Benziane',
         avatar: 'https://randomuser.me/api/portraits/women/2.jpg',
-        role: 'patient',
+        role: 'patient' as const,
         lastMessage: 'Merci pour la consultation',
         unread: 0,
       },
@@ -67,7 +67,7 @@ const generateContacts = (userId: string, userRole: string) => {
         id: 'patient3',
         name: 'Karim Tadlaoui',
         avatar: 'https://randomuser.me/api/portraits/men/3.jpg',
-        role: 'patient',
+        role: 'patient' as const,
         unread: 0,
       },
     ];
@@ -77,7 +77,7 @@ const generateContacts = (userId: string, userRole: string) => {
         id: 'doctor1',
         name: 'Dr. Yasmine Benali',
         avatar: 'https://randomuser.me/api/portraits/women/44.jpg',
-        role: 'doctor',
+        role: 'doctor' as const,
         lastMessage: 'N\'oubliez pas votre rendez-vous demain',
         unread: 1,
       },
@@ -85,7 +85,7 @@ const generateContacts = (userId: string, userRole: string) => {
         id: 'doctor2',
         name: 'Dr. Omar Kadiri',
         avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
-        role: 'doctor',
+        role: 'doctor' as const,
         unread: 0,
       },
     ];

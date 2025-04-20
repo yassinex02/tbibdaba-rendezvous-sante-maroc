@@ -10,7 +10,8 @@ import {
   Search, 
   BarChart3, 
   Settings, 
-  HelpCircle 
+  HelpCircle,
+  MessageCircle
 } from 'lucide-react';
 
 interface SidebarLinkProps {
@@ -48,12 +49,14 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { path: '/patient/dashboard', label: 'Tableau de bord', icon: <Home size={20} /> },
     { path: '/patient/search', label: 'Rechercher', icon: <Search size={20} /> },
     { path: '/patient/appointments', label: 'Rendez-vous', icon: <Calendar size={20} /> },
+    { path: '/patient/chat', label: 'Messages', icon: <MessageCircle size={20} /> },
     { path: '/patient/profile', label: 'Mon Profil', icon: <User size={20} /> },
   ];
 
   const doctorLinks = [
     { path: '/doctor/dashboard', label: 'Tableau de bord', icon: <Home size={20} /> },
     { path: '/doctor/appointments', label: 'Rendez-vous', icon: <Calendar size={20} /> },
+    { path: '/doctor/chat', label: 'Messages', icon: <MessageCircle size={20} /> },
     { path: '/doctor/analytics', label: 'Analytique', icon: <BarChart3 size={20} /> },
     { path: '/doctor/profile', label: 'Mon Profil', icon: <User size={20} /> },
   ];

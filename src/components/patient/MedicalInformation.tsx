@@ -1,284 +1,392 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { useToast } from '@/components/ui/use-toast';
+import { Checkbox } from "@/components/ui/checkbox";
+import { Save, Loader2 } from 'lucide-react';
+import { toast } from "@/components/ui/use-toast";
 
-interface MedicalData {
-  chronicConditions: {
-    id: string;
-    label: string;
-    checked: boolean;
-  }[];
-  medications: string[];
-  allergies: string;
-  bloodType: string;
-  emergencyContact: {
-    name: string;
-    relationship: string;
-    phone: string;
-  };
+interface MedicalCondition {
+  id: string;
+  name: string;
 }
 
-const defaultMedicalData: MedicalData = {
-  chronicConditions: [
-    { id: 'diabetes', label: 'Diabète', checked: false },
-    { id: 'hypertension', label: 'Hypertension', checked: false },
-    { id: 'asthma', label: 'Asthme', checked: false },
-    { id: 'heart-disease', label: 'Maladie cardiaque', checked: false },
-    { id: 'arthritis', label: 'Arthrite', checked: false },
-    { id: 'cancer', label: 'Cancer', checked: false },
-    { id: 'thyroid', label: 'Problèmes de thyroïde', checked: false }
-  ],
-  medications: [],
-  allergies: '',
-  bloodType: '',
-  emergencyContact: {
-    name: '',
-    relationship: '',
-    phone: ''
-  }
-};
+interface Medication {
+  id: string;
+  name: string;
+  dosage: string;
+  frequency: string;
+}
 
-const MedicalInformation = () => {
-  const [medicalData, setMedicalData] = useState<MedicalData>(defaultMedicalData);
-  const [newMedication, setNewMedication] = useState('');
+interface MedicalInformationProps {
+  patientId: string;
+}
+
+const MedicalInformation = ({ patientId }: MedicalInformationProps) => {
   const [isSaving, setIsSaving] = useState(false);
-  const { toast } = useToast();
-
-  // Load from localStorage on mount
-  useEffect(() => {
-    const savedData = localStorage.getItem('patientMedicalData');
-    if (savedData) {
-      setMedicalData(JSON.parse(savedData));
-    }
-  }, []);
-
-  const toggleCondition = (id: string) => {
-    setMedicalData(prev => ({
-      ...prev,
-      chronicConditions: prev.chronicConditions.map(condition =>
-        condition.id === id
-          ? { ...condition, checked: !condition.checked }
-          : condition
-      )
-    }));
-  };
-
-  const addMedication = () => {
-    if (newMedication.trim()) {
+  
+  // Common medical conditions
+  const commonConditions: MedicalCondition[] = [
+    { id: 'diabetes', name: 'Diabète' },
+    { id: 'hypertension', name: 'Hypertension' },
+    { id: 'asthma', name: 'Asthme' },
+    { id: 'heartDisease', name: 'Maladie cardiaque' },
+    { id: 'arthritis', name: 'Arthrite' },
+    { id: 'cancer', name: 'Cancer' },
+    { id: 'depression', name: 'Dépression' },
+    { id: 'thyroid', name: 'Problèmes de thyroïde' },
+  ];
+  
+  const [medicalData, setMedicalData] = useState({
+    conditions: [] as string[],
+    otherConditions: '',
+    medications: [] as Medication[],
+    allergies: '',
+    bloodType: '',
+    height: '',
+    weight: '',
+    emergencyContact: {
+      name: '',
+      phone: '',
+      relationship: '',
+    },
+  });
+  
+  const [newMedication, setNewMedication] = useState({
+    name: '',
+    dosage: '',
+    frequency: '',
+  });
+  
+  const handleConditionChange = (condition: string, checked: boolean) => {
+    if (checked) {
       setMedicalData(prev => ({
         ...prev,
-        medications: [...prev.medications, newMedication.trim()]
+        conditions: [...prev.conditions, condition],
       }));
-      setNewMedication('');
+    } else {
+      setMedicalData(prev => ({
+        ...prev,
+        conditions: prev.conditions.filter(c => c !== condition),
+      }));
     }
   };
-
-  const removeMedication = (index: number) => {
-    setMedicalData(prev => ({
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    
+    // Handle nested fields
+    if (name.includes('.')) {
+      const [parent, child] = name.split('.');
+      setMedicalData(prev => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent as keyof typeof prev],
+          [child]: value,
+        },
+      }));
+    } else {
+      setMedicalData(prev => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
+  };
+  
+  const handleNewMedicationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setNewMedication(prev => ({
       ...prev,
-      medications: prev.medications.filter((_, i) => i !== index)
+      [name]: value,
     }));
   };
-
-  const handleInputChange = (
-    field: keyof Omit<MedicalData, 'chronicConditions' | 'medications' | 'emergencyContact'>,
-    value: string
-  ) => {
+  
+  const addMedication = () => {
+    if (!newMedication.name) return;
+    
+    const medication: Medication = {
+      id: `med-${Date.now()}`,
+      ...newMedication,
+    };
+    
     setMedicalData(prev => ({
       ...prev,
-      [field]: value
+      medications: [...prev.medications, medication],
     }));
+    
+    // Reset form
+    setNewMedication({
+      name: '',
+      dosage: '',
+      frequency: '',
+    });
   };
-
-  const handleEmergencyContactChange = (
-    field: keyof MedicalData['emergencyContact'],
-    value: string
-  ) => {
+  
+  const removeMedication = (id: string) => {
     setMedicalData(prev => ({
       ...prev,
-      emergencyContact: {
-        ...prev.emergencyContact,
-        [field]: value
-      }
+      medications: prev.medications.filter(med => med.id !== id),
     }));
   };
-
-  const handleSave = () => {
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsSaving(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      // Save to localStorage
-      localStorage.setItem('patientMedicalData', JSON.stringify(medicalData));
-      
-      toast({
-        title: "Informations médicales enregistrées",
-        description: "Vos informations médicales ont été mises à jour",
-      });
-      
-      setIsSaving(false);
-    }, 500);
+    // In a real app, this would send data to an API
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    console.log('Medical data saved:', medicalData);
+    
+    toast({
+      title: "Informations médicales enregistrées",
+      description: "Vos informations médicales ont été mises à jour avec succès.",
+    });
+    
+    setIsSaving(false);
   };
-
+  
   return (
     <Card>
       <CardHeader>
         <CardTitle>Informations médicales</CardTitle>
         <CardDescription>
-          Ces informations aideront vos médecins à vous fournir de meilleurs soins
+          Ces informations seront partagées avec les médecins lors de vos rendez-vous
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Chronic Conditions */}
-        <div>
-          <h3 className="text-sm font-medium mb-3">Conditions chroniques</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {medicalData.chronicConditions.map(condition => (
-              <div key={condition.id} className="flex items-center space-x-2">
-                <Checkbox
-                  id={condition.id}
-                  checked={condition.checked}
-                  onCheckedChange={() => toggleCondition(condition.id)}
-                />
-                <Label htmlFor={condition.id} className="text-sm">
-                  {condition.label}
-                </Label>
-              </div>
-            ))}
-          </div>
-        </div>
-        
-        {/* Blood Type */}
-        <div>
-          <Label htmlFor="blood-type" className="text-sm font-medium">
-            Groupe sanguin
-          </Label>
-          <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 mt-2">
-            {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(type => (
-              <Button
-                key={type}
-                type="button"
-                variant={medicalData.bloodType === type ? "default" : "outline"}
-                onClick={() => handleInputChange('bloodType', type)}
-                className={`text-sm py-1 ${medicalData.bloodType === type ? 'bg-tbibdaba-teal hover:bg-tbibdaba-teal/90' : ''}`}
-              >
-                {type}
-              </Button>
-            ))}
-          </div>
-        </div>
-        
-        {/* Medications */}
-        <div>
-          <Label htmlFor="medications" className="text-sm font-medium">
-            Médicaments actuels
-          </Label>
-          <div className="flex mt-2">
-            <Input
-              id="medications"
-              placeholder="Ajouter un médicament"
-              value={newMedication}
-              onChange={(e) => setNewMedication(e.target.value)}
-              className="flex-1 mr-2"
-            />
-            <Button 
-              type="button" 
-              onClick={addMedication}
-              disabled={!newMedication.trim()}
-            >
-              Ajouter
-            </Button>
-          </div>
-          
-          {medicalData.medications.length > 0 && (
-            <div className="mt-3 space-y-2">
-              {medicalData.medications.map((medication, index) => (
-                <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                  <span>{medication}</span>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => removeMedication(index)}
-                    className="h-8 w-8 p-0"
-                  >
-                    ✕
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        
-        {/* Allergies */}
-        <div>
-          <Label htmlFor="allergies" className="text-sm font-medium">
-            Allergies et réactions
-          </Label>
-          <Textarea
-            id="allergies"
-            placeholder="Énumérez vos allergies et décrivez vos réactions"
-            value={medicalData.allergies}
-            onChange={(e) => handleInputChange('allergies', e.target.value)}
-            className="mt-2"
-          />
-        </div>
-        
-        {/* Emergency Contact */}
-        <div>
-          <h3 className="text-sm font-medium mb-3">Contact d'urgence</h3>
-          <div className="grid gap-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="emergency-name" className="text-sm">
-                  Nom complet
-                </Label>
-                <Input
-                  id="emergency-name"
-                  value={medicalData.emergencyContact.name}
-                  onChange={(e) => handleEmergencyContactChange('name', e.target.value)}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="emergency-relationship" className="text-sm">
-                  Relation
-                </Label>
-                <Input
-                  id="emergency-relationship"
-                  value={medicalData.emergencyContact.relationship}
-                  onChange={(e) => handleEmergencyContactChange('relationship', e.target.value)}
-                  className="mt-1"
-                />
-              </div>
-            </div>
+      <CardContent>
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-6">
             <div>
-              <Label htmlFor="emergency-phone" className="text-sm">
-                Numéro de téléphone
-              </Label>
-              <Input
-                id="emergency-phone"
-                type="tel"
-                value={medicalData.emergencyContact.phone}
-                onChange={(e) => handleEmergencyContactChange('phone', e.target.value)}
-                className="mt-1"
+              <h3 className="text-lg font-medium mb-4">Conditions médicales chroniques</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {commonConditions.map(condition => (
+                  <div key={condition.id} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={condition.id}
+                      checked={medicalData.conditions.includes(condition.id)}
+                      onCheckedChange={checked => 
+                        handleConditionChange(condition.id, checked as boolean)
+                      }
+                      aria-label={condition.name}
+                    />
+                    <label
+                      htmlFor={condition.id}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      {condition.name}
+                    </label>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="mt-4">
+                <Label htmlFor="otherConditions">Autres conditions</Label>
+                <Textarea
+                  id="otherConditions"
+                  name="otherConditions"
+                  placeholder="Listez d'autres conditions médicales si nécessaire"
+                  value={medicalData.otherConditions}
+                  onChange={handleInputChange}
+                  rows={3}
+                  aria-label="Autres conditions médicales"
+                />
+              </div>
+            </div>
+            
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-medium mb-4">Médicaments actuels</h3>
+              
+              {medicalData.medications.length > 0 && (
+                <div className="space-y-3 mb-4">
+                  {medicalData.medications.map((med) => (
+                    <div key={med.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                      <div>
+                        <div className="font-medium">{med.name}</div>
+                        <div className="text-sm text-gray-500">
+                          {med.dosage} - {med.frequency}
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeMedication(med.id)}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        aria-label={`Supprimer ${med.name}`}
+                      >
+                        ✕
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="name">Médicament</Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    value={newMedication.name}
+                    onChange={handleNewMedicationChange}
+                    placeholder="Nom du médicament"
+                    aria-label="Nom du médicament"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="dosage">Dosage</Label>
+                  <Input
+                    id="dosage"
+                    name="dosage"
+                    value={newMedication.dosage}
+                    onChange={handleNewMedicationChange}
+                    placeholder="ex: 500mg"
+                    aria-label="Dosage du médicament"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="frequency">Fréquence</Label>
+                  <Input
+                    id="frequency"
+                    name="frequency"
+                    value={newMedication.frequency}
+                    onChange={handleNewMedicationChange}
+                    placeholder="ex: 2 fois par jour"
+                    aria-label="Fréquence de prise"
+                  />
+                </div>
+              </div>
+              
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-3"
+                onClick={addMedication}
+                disabled={!newMedication.name}
+                aria-label="Ajouter un médicament"
+              >
+                + Ajouter un médicament
+              </Button>
+            </div>
+            
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-medium mb-4">Allergies</h3>
+              <Textarea
+                id="allergies"
+                name="allergies"
+                placeholder="Listez vos allergies connues (médicaments, aliments, etc.)"
+                value={medicalData.allergies}
+                onChange={handleInputChange}
+                rows={3}
+                aria-label="Allergies connues"
               />
             </div>
+            
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-medium mb-4">Informations générales</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="bloodType">Groupe sanguin</Label>
+                  <Input
+                    id="bloodType"
+                    name="bloodType"
+                    value={medicalData.bloodType}
+                    onChange={handleInputChange}
+                    placeholder="ex: A+"
+                    aria-label="Groupe sanguin"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="height">Taille (cm)</Label>
+                  <Input
+                    id="height"
+                    name="height"
+                    type="number"
+                    value={medicalData.height}
+                    onChange={handleInputChange}
+                    placeholder="170"
+                    aria-label="Taille en centimètres"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="weight">Poids (kg)</Label>
+                  <Input
+                    id="weight"
+                    name="weight"
+                    type="number"
+                    value={medicalData.weight}
+                    onChange={handleInputChange}
+                    placeholder="70"
+                    aria-label="Poids en kilogrammes"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-medium mb-4">Contact d'urgence</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="emergencyName">Nom</Label>
+                  <Input
+                    id="emergencyName"
+                    name="emergencyContact.name"
+                    value={medicalData.emergencyContact.name}
+                    onChange={handleInputChange}
+                    placeholder="Nom du contact"
+                    aria-label="Nom du contact d'urgence"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="emergencyPhone">Téléphone</Label>
+                  <Input
+                    id="emergencyPhone"
+                    name="emergencyContact.phone"
+                    value={medicalData.emergencyContact.phone}
+                    onChange={handleInputChange}
+                    placeholder="+212 6XX XXXXXX"
+                    aria-label="Téléphone du contact d'urgence"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="emergencyRelationship">Relation</Label>
+                  <Input
+                    id="emergencyRelationship"
+                    name="emergencyContact.relationship"
+                    value={medicalData.emergencyContact.relationship}
+                    onChange={handleInputChange}
+                    placeholder="ex: Conjoint, Parent"
+                    aria-label="Relation avec le contact d'urgence"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        </form>
       </CardContent>
-      <CardFooter className="flex justify-end">
+      <CardFooter>
         <Button
-          onClick={handleSave}
+          type="submit"
+          onClick={handleSubmit}
           disabled={isSaving}
-          className="bg-tbibdaba-teal hover:bg-tbibdaba-teal/90"
+          className="bg-tbibdaba-teal hover:bg-tbibdaba-teal/90 ml-auto"
+          aria-label="Enregistrer les informations médicales"
         >
-          {isSaving ? 'Enregistrement...' : 'Enregistrer les modifications'}
+          {isSaving ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Enregistrement...
+            </>
+          ) : (
+            <>
+              <Save className="mr-2 h-4 w-4" />
+              Enregistrer
+            </>
+          )}
         </Button>
       </CardFooter>
     </Card>

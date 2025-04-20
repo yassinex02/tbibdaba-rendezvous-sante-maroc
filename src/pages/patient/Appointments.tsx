@@ -9,6 +9,8 @@ import { Calendar as CalendarIcon, Clock, MapPin, Phone, FileText, AlertCircle, 
 import { appointments } from '../../lib/mock-data';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "@/components/ui/use-toast";
+import ReviewForm from '../../components/reviews/ReviewForm';
+import RescheduleForm from '../../components/appointments/RescheduleForm';
 
 interface Appointment {
   id: string;
@@ -22,9 +24,21 @@ interface Appointment {
   notes?: string;
 }
 
-const AppointmentCard = ({ appointment, onCancel }: { 
+interface Review {
+  id: string;
+  doctorId: string;
+  appointmentId: string;
+  patientId: string;
+  rating: number;
+  comment: string;
+  date: string;
+}
+
+const AppointmentCard = ({ appointment, onCancel, onReschedule, onReview }: { 
   appointment: Appointment;
   onCancel: (id: string) => void;
+  onReschedule: (id: string) => void;
+  onReview: (appointmentId: string, doctorId: string, doctorName: string) => void;
 }) => {
   const statusIcons = {
     confirmed: <Clock className="h-5 w-5 text-blue-500" />,
@@ -112,6 +126,8 @@ const AppointmentCard = ({ appointment, onCancel }: {
                   variant="outline" 
                   size="sm" 
                   className="w-full md:w-auto"
+                  onClick={() => onReschedule(appointment.id)}
+                  aria-label="Reprogrammer le rendez-vous"
                 >
                   Reprogrammer
                 </Button>
@@ -120,6 +136,7 @@ const AppointmentCard = ({ appointment, onCancel }: {
                   size="sm" 
                   className="w-full md:w-auto"
                   onClick={() => onCancel(appointment.id)}
+                  aria-label="Annuler le rendez-vous"
                 >
                   Annuler
                 </Button>
@@ -127,7 +144,13 @@ const AppointmentCard = ({ appointment, onCancel }: {
             )}
             
             {isPast && appointment.status === 'completed' && (
-              <Button variant="outline" size="sm" className="mt-4">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-4"
+                onClick={() => onReview(appointment.id, appointment.doctorId, appointment.doctorName)}
+                aria-label="Donner un avis sur ce rendez-vous"
+              >
                 Donner un avis
               </Button>
             )}
@@ -144,6 +167,10 @@ const PatientAppointments = () => {
   const [pastAppointments, setPastAppointments] = useState<Appointment[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [showRescheduleForm, setShowRescheduleForm] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -167,6 +194,9 @@ const PatientAppointments = () => {
       setUpcomingAppointments(upcoming);
       setPastAppointments(past);
       setIsLoading(false);
+      
+      // Initialize empty reviews array
+      setReviews([]);
     };
     
     fetchAppointments();
@@ -232,6 +262,101 @@ const PatientAppointments = () => {
     });
   };
 
+  const handleRescheduleClick = (appointmentId: string) => {
+    const appointment = allAppointments.find(appt => appt.id === appointmentId);
+    if (appointment) {
+      setSelectedAppointment(appointment);
+      setShowRescheduleForm(true);
+    }
+  };
+
+  const handleRescheduleSubmit = (appointmentId: string, newDate: string, newTime: string) => {
+    // In a real app, this would call an API to reschedule the appointment
+    const updatedAppointments = allAppointments.map(appt => 
+      appt.id === appointmentId ? { ...appt, date: newDate, time: newTime } : appt
+    );
+    
+    setAllAppointments(updatedAppointments);
+    
+    // Update the upcoming appointments list
+    const updatedUpcoming = updatedAppointments.filter(
+      appt => (new Date(appt.date) >= new Date() && appt.status !== 'cancelled') || 
+      (appt.status === 'pending')
+    );
+    
+    setUpcomingAppointments(updatedUpcoming);
+    setShowRescheduleForm(false);
+    setSelectedAppointment(null);
+    
+    toast({
+      title: "Rendez-vous reprogrammé",
+      description: `Votre rendez-vous a été déplacé au ${new Date(newDate).toLocaleDateString('fr-FR')} à ${newTime}.`,
+    });
+    
+    // Schedule a reminder for the new appointment (2 hours before)
+    scheduleReminder(appointmentId, newDate, newTime);
+  };
+
+  const handleReviewClick = (appointmentId: string, doctorId: string, doctorName: string) => {
+    // Check if a review already exists for this appointment
+    const existingReview = reviews.find(review => review.appointmentId === appointmentId);
+    
+    if (existingReview) {
+      toast({
+        title: "Avis déjà soumis",
+        description: "Vous avez déjà donné votre avis pour ce rendez-vous.",
+      });
+      return;
+    }
+    
+    const appointment = allAppointments.find(appt => appt.id === appointmentId);
+    if (appointment) {
+      setSelectedAppointment(appointment);
+      setShowReviewForm(true);
+    }
+  };
+
+  const handleReviewSubmit = (reviewData: {
+    rating: number;
+    comment: string;
+    doctorId: string;
+    appointmentId: string;
+  }) => {
+    // In a real app, this would call an API to submit the review
+    const newReview: Review = {
+      id: `review-${Math.random().toString(36).substr(2, 9)}`,
+      patientId: 'current-patient-id', // In a real app, this would be the actual patient ID
+      date: new Date().toISOString(),
+      ...reviewData,
+    };
+    
+    setReviews([...reviews, newReview]);
+    setShowReviewForm(false);
+    setSelectedAppointment(null);
+    
+    toast({
+      title: "Avis soumis",
+      description: "Merci d'avoir partagé votre expérience!",
+    });
+    
+    // In a real app, you would also update the doctor's rating in the database
+    console.log('New review submitted:', newReview);
+  };
+
+  const scheduleReminder = (appointmentId: string, date: string, time: string) => {
+    // Parse the date and time to create a reminder 2 hours before
+    const appointmentDateTime = new Date(`${date}T${time}`);
+    const reminderTime = new Date(appointmentDateTime.getTime() - 2 * 60 * 60 * 1000);
+    
+    console.log(`Reminder scheduled for ${reminderTime.toLocaleString()} for appointment ${appointmentId}`);
+    
+    // In a real app, this would store the reminder in a database and trigger actual notifications
+    // For now, we just log it to the console
+  };
+
+  // Mock available time slots for rescheduling
+  const availableTimeSlots = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -247,122 +372,159 @@ const PatientAppointments = () => {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2">
-            <Tabs defaultValue="upcoming" className="space-y-4">
-              <TabsList>
-                <TabsTrigger value="upcoming">À venir</TabsTrigger>
-                <TabsTrigger value="past">Passés</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="upcoming" className="space-y-4">
-                {isLoading ? (
-                  <div className="flex justify-center items-center py-12">
-                    <Loader2 className="h-8 w-8 text-tbibdaba-teal animate-spin" />
-                  </div>
-                ) : upcomingAppointments.length > 0 ? (
-                  upcomingAppointments.map(appointment => (
-                    <AppointmentCard 
-                      key={appointment.id} 
-                      appointment={appointment} 
-                      onCancel={handleCancelAppointment}
-                    />
-                  ))
-                ) : (
-                  <Card>
-                    <CardContent className="flex flex-col items-center justify-center py-8">
-                      <CalendarIcon className="h-12 w-12 text-gray-300 mb-4" />
-                      <h3 className="text-lg font-medium mb-1">
-                        {selectedDate ? 'Pas de rendez-vous à cette date' : 'Aucun rendez-vous à venir'}
-                      </h3>
-                      <p className="text-gray-500 text-center mb-4">
-                        {selectedDate ? 
-                          'Essayez une autre date ou annulez le filtre de date' : 
-                          'Vous n\'avez pas de rendez-vous programmés prochainement'}
-                      </p>
-                      <Button 
-                        variant="outline" 
-                        onClick={() => navigate('/patient/search')}
-                      >
-                        Trouver un médecin
-                      </Button>
-                    </CardContent>
-                  </Card>
-                )}
-              </TabsContent>
-              
-              <TabsContent value="past" className="space-y-4">
-                {isLoading ? (
-                  <div className="flex justify-center items-center py-12">
-                    <Loader2 className="h-8 w-8 text-tbibdaba-teal animate-spin" />
-                  </div>
-                ) : pastAppointments.length > 0 ? (
-                  pastAppointments.map(appointment => (
-                    <AppointmentCard 
-                      key={appointment.id} 
-                      appointment={appointment} 
-                      onCancel={handleCancelAppointment}
-                    />
-                  ))
-                ) : (
-                  <Card>
-                    <CardContent className="flex flex-col items-center justify-center py-8">
-                      <Clock className="h-12 w-12 text-gray-300 mb-4" />
-                      <h3 className="text-lg font-medium mb-1">
-                        {selectedDate ? 'Pas de rendez-vous passés à cette date' : 'Aucun rendez-vous passé'}
-                      </h3>
-                      <p className="text-gray-500 text-center">
-                        {selectedDate ? 
-                          'Essayez une autre date ou annulez le filtre de date' : 
-                          'Votre historique de rendez-vous apparaîtra ici'}
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-              </TabsContent>
-            </Tabs>
-          </div>
-          
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle>Filtrer par date</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  className="rounded-md border"
-                />
+        {showReviewForm && selectedAppointment ? (
+          <ReviewForm
+            doctorId={selectedAppointment.doctorId}
+            doctorName={selectedAppointment.doctorName}
+            appointmentId={selectedAppointment.id}
+            onSubmit={handleReviewSubmit}
+            onCancel={() => {
+              setShowReviewForm(false);
+              setSelectedAppointment(null);
+            }}
+          />
+        ) : showRescheduleForm && selectedAppointment ? (
+          <RescheduleForm
+            appointmentId={selectedAppointment.id}
+            doctorName={selectedAppointment.doctorName}
+            currentDate={new Date(selectedAppointment.date).toLocaleDateString('fr-FR', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              weekday: 'long'
+            })}
+            currentTime={selectedAppointment.time}
+            availableSlots={availableTimeSlots}
+            onSubmit={handleRescheduleSubmit}
+            onCancel={() => {
+              setShowRescheduleForm(false);
+              setSelectedAppointment(null);
+            }}
+          />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-2">
+              <Tabs defaultValue="upcoming" className="space-y-4">
+                <TabsList>
+                  <TabsTrigger value="upcoming">À venir</TabsTrigger>
+                  <TabsTrigger value="past">Passés</TabsTrigger>
+                </TabsList>
                 
-                {selectedDate && (
-                  <Button 
-                    variant="outline" 
-                    className="w-full mt-4" 
-                    onClick={() => setSelectedDate(undefined)}
-                  >
-                    Effacer le filtre
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
+                <TabsContent value="upcoming" className="space-y-4">
+                  {isLoading ? (
+                    <div className="flex justify-center items-center py-12">
+                      <Loader2 className="h-8 w-8 text-tbibdaba-teal animate-spin" />
+                    </div>
+                  ) : upcomingAppointments.length > 0 ? (
+                    upcomingAppointments.map(appointment => (
+                      <AppointmentCard 
+                        key={appointment.id} 
+                        appointment={appointment} 
+                        onCancel={handleCancelAppointment}
+                        onReschedule={handleRescheduleClick}
+                        onReview={handleReviewClick}
+                      />
+                    ))
+                  ) : (
+                    <Card>
+                      <CardContent className="flex flex-col items-center justify-center py-8">
+                        <CalendarIcon className="h-12 w-12 text-gray-300 mb-4" />
+                        <h3 className="text-lg font-medium mb-1">
+                          {selectedDate ? 'Pas de rendez-vous à cette date' : 'Aucun rendez-vous à venir'}
+                        </h3>
+                        <p className="text-gray-500 text-center mb-4">
+                          {selectedDate ? 
+                            'Essayez une autre date ou annulez le filtre de date' : 
+                            'Vous n\'avez pas de rendez-vous programmés prochainement'}
+                        </p>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => navigate('/patient/search')}
+                        >
+                          Trouver un médecin
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="past" className="space-y-4">
+                  {isLoading ? (
+                    <div className="flex justify-center items-center py-12">
+                      <Loader2 className="h-8 w-8 text-tbibdaba-teal animate-spin" />
+                    </div>
+                  ) : pastAppointments.length > 0 ? (
+                    pastAppointments.map(appointment => (
+                      <AppointmentCard 
+                        key={appointment.id} 
+                        appointment={appointment} 
+                        onCancel={handleCancelAppointment}
+                        onReschedule={handleRescheduleClick}
+                        onReview={handleReviewClick}
+                      />
+                    ))
+                  ) : (
+                    <Card>
+                      <CardContent className="flex flex-col items-center justify-center py-8">
+                        <Clock className="h-12 w-12 text-gray-300 mb-4" />
+                        <h3 className="text-lg font-medium mb-1">
+                          {selectedDate ? 'Pas de rendez-vous passés à cette date' : 'Aucun rendez-vous passé'}
+                        </h3>
+                        <p className="text-gray-500 text-center">
+                          {selectedDate ? 
+                            'Essayez une autre date ou annulez le filtre de date' : 
+                            'Votre historique de rendez-vous apparaîtra ici'}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </div>
             
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle>Besoin d'aide?</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-gray-600">
-                  Si vous avez des questions ou rencontrez des problèmes avec vos rendez-vous, notre équipe est là pour vous aider.
-                </p>
-                <Button variant="outline" className="w-full">
-                  Contacter le support
-                </Button>
-              </CardContent>
-            </Card>
+            <div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Filtrer par date</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
+                    className="rounded-md border bg-popover pointer-events-auto z-50"
+                    aria-label="Filtrer les rendez-vous par date"
+                  />
+                  
+                  {selectedDate && (
+                    <Button 
+                      variant="outline" 
+                      className="w-full mt-4" 
+                      onClick={() => setSelectedDate(undefined)}
+                      aria-label="Effacer le filtre de date"
+                    >
+                      Effacer le filtre
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+              
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle>Besoin d'aide?</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    Si vous avez des questions ou rencontrez des problèmes avec vos rendez-vous, notre équipe est là pour vous aider.
+                  </p>
+                  <Button variant="outline" className="w-full">
+                    Contacter le support
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </DashboardLayout>
   );

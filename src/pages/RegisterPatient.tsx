@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,11 +28,38 @@ const RegisterPatient = () => {
     insuranceProvider: '',
     insuranceNumber: '',
   });
+  
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [insuranceValid, setInsuranceValid] = useState(false);
   
-  const { register } = useAuth();
+  const { register, validateInsurance } = useAuth();
   const navigate = useNavigate();
+
+  // Insurance providers for the dropdown
+  const insuranceProviders = ['CNOPS', 'CNSS', 'AMO', 'RMA', 'MAMDA'];
+
+  // Validate insurance when related fields change
+  useEffect(() => {
+    if (formData.insuranceProvider && formData.insuranceNumber) {
+      const result = validateInsurance(formData.insuranceProvider, formData.insuranceNumber);
+      
+      if (!result.valid && result.message) {
+        setErrors(prev => ({ ...prev, insuranceNumber: result.message }));
+        setInsuranceValid(false);
+      } else {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.insuranceNumber;
+          delete newErrors.insuranceProvider;
+          return newErrors;
+        });
+        setInsuranceValid(result.valid);
+      }
+    } else {
+      setInsuranceValid(false);
+    }
+  }, [formData.insuranceProvider, formData.insuranceNumber, validateInsurance]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -102,6 +129,29 @@ const RegisterPatient = () => {
       newErrors.agreeTos = 'Vous devez accepter les conditions';
     }
     
+    // If insurance fields are partially filled
+    if ((formData.insuranceProvider && !formData.insuranceNumber) || 
+        (!formData.insuranceProvider && formData.insuranceNumber)) {
+      if (!formData.insuranceProvider) {
+        newErrors.insuranceProvider = 'Veuillez sélectionner un assureur';
+      }
+      if (!formData.insuranceNumber) {
+        newErrors.insuranceNumber = 'Veuillez saisir votre numéro d\'assurance';
+      }
+    }
+    
+    // If both insurance fields are filled, validate through the auth context
+    if (formData.insuranceProvider && formData.insuranceNumber) {
+      const insuranceValidation = validateInsurance(
+        formData.insuranceProvider, 
+        formData.insuranceNumber
+      );
+      
+      if (!insuranceValidation.valid && insuranceValidation.message) {
+        newErrors.insuranceNumber = insuranceValidation.message;
+      }
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -140,6 +190,31 @@ const RegisterPatient = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Check if form is valid for submission
+  const isFormValid = () => {
+    const mandatoryFields = [
+      formData.name, 
+      formData.email, 
+      formData.password, 
+      formData.confirmPassword,
+      formData.phone,
+      formData.city,
+      formData.birthdate,
+      formData.gender,
+      formData.agreeTos
+    ];
+    
+    const basicFieldsValid = mandatoryFields.every(field => 
+      typeof field === 'boolean' ? field : Boolean(field)
+    );
+    
+    // Check if insurance is required to be valid
+    const insuranceFieldsPresent = formData.insuranceProvider || formData.insuranceNumber;
+    
+    // Form is valid if all mandatory fields are valid AND either insurance is valid or not entered at all
+    return basicFieldsValid && (!insuranceFieldsPresent || insuranceValid);
   };
 
   return (
@@ -303,15 +378,24 @@ const RegisterPatient = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
               <div>
                 <Label htmlFor="insuranceProvider">Assureur</Label>
-                <Input
-                  id="insuranceProvider"
-                  name="insuranceProvider"
-                  type="text"
+                <Select
                   value={formData.insuranceProvider}
-                  onChange={handleChange}
-                  placeholder="Nom de votre assureur"
-                  className="mt-1"
-                />
+                  onValueChange={(value) => handleSelectChange('insuranceProvider', value)}
+                >
+                  <SelectTrigger 
+                    className={`mt-1 ${errors.insuranceProvider ? 'border-red-500' : ''}`}
+                  >
+                    <SelectValue placeholder="Nom de votre assureur" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {insuranceProviders.map((provider) => (
+                      <SelectItem key={provider} value={provider}>{provider}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.insuranceProvider && (
+                  <p className="text-red-500 text-xs mt-1">{errors.insuranceProvider}</p>
+                )}
               </div>
               
               <div>
@@ -323,8 +407,14 @@ const RegisterPatient = () => {
                   value={formData.insuranceNumber}
                   onChange={handleChange}
                   placeholder="Numéro de votre assurance"
-                  className="mt-1"
+                  className={`mt-1 ${errors.insuranceNumber ? 'border-red-500' : ''}`}
                 />
+                {errors.insuranceNumber && (
+                  <p className="text-red-500 text-xs mt-1">{errors.insuranceNumber}</p>
+                )}
+                {insuranceValid && formData.insuranceNumber && (
+                  <p className="text-green-500 text-xs mt-1">Numéro d'assurance valide</p>
+                )}
               </div>
             </div>
           </div>
@@ -354,7 +444,7 @@ const RegisterPatient = () => {
         <Button 
           type="submit" 
           className="w-full bg-tbibdaba-teal hover:bg-tbibdaba-teal/90 text-white py-6" 
-          disabled={isSubmitting}
+          disabled={isSubmitting || !isFormValid()}
         >
           {isSubmitting ? (
             <>

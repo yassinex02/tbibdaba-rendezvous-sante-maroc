@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, Save, Clock, Upload, MailCheck, BellRing, BellOff, Trash2 } from 'lucide-react';
+import { Loader2, Save, Clock, Upload, MailCheck, BellRing, BellOff, Trash2, FileText, FileCheck } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cities, specialties } from '../../lib/mock-data';
@@ -36,6 +35,13 @@ const DoctorProfile = () => {
     emailNotifications: true,
     smsNotifications: true,
     reminderTime: '24',
+    licenseNumber: '',
+    inpeCode: '',
+    councilCard: null as File | null,
+    councilCardFilename: '',
+    diploma: null as File | null,
+    diplomaFilename: '',
+    unavailableDates: [] as Date[],
   });
 
   useEffect(() => {
@@ -61,6 +67,13 @@ const DoctorProfile = () => {
         emailNotifications: true,
         smsNotifications: true,
         reminderTime: '24',
+        licenseNumber: 'MD12345',
+        inpeCode: 'INPE7890',
+        councilCard: null,
+        councilCardFilename: '',
+        diploma: null,
+        diplomaFilename: '',
+        unavailableDates: [],
       });
       
       setIsLoading(false);
@@ -82,9 +95,51 @@ const DoctorProfile = () => {
     setProfileData(prev => ({ ...prev, [name]: checked }));
   };
 
+  const handleFileChange = (name: string, file: File | null) => {
+    if (file) {
+      const filenameField = `${name}Filename` as keyof typeof profileData;
+      setProfileData(prev => ({
+        ...prev,
+        [name]: file,
+        [filenameField]: file.name
+      }));
+    }
+  };
+
+  const handleDateSelect = (date: Date | undefined) => {
+    if (!date) return;
+    
+    // Check if date is already selected
+    const isDateSelected = profileData.unavailableDates.some(
+      d => d.toDateString() === date.toDateString()
+    );
+    
+    if (isDateSelected) {
+      // Remove date
+      const newDates = profileData.unavailableDates.filter(
+        d => d.toDateString() !== date.toDateString()
+      );
+      setProfileData(prev => ({ ...prev, unavailableDates: newDates }));
+    } else {
+      // Add date
+      setProfileData(prev => ({
+        ...prev,
+        unavailableDates: [...prev.unavailableDates, date]
+      }));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
+    
+    // Log file information to console for debugging
+    if (profileData.councilCard) {
+      console.log('Council Card:', profileData.councilCard.name, profileData.councilCard.type);
+    }
+    if (profileData.diploma) {
+      console.log('Diploma:', profileData.diploma.name, profileData.diploma.type);
+    }
     
     // Simulate API call to save profile
     await new Promise(resolve => setTimeout(resolve, 1500));
@@ -121,6 +176,7 @@ const DoctorProfile = () => {
           <TabsList>
             <TabsTrigger value="general">Général</TabsTrigger>
             <TabsTrigger value="practice">Cabinet</TabsTrigger>
+            <TabsTrigger value="credentials">Diplômes</TabsTrigger>
             <TabsTrigger value="schedule">Planning</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
           </TabsList>
@@ -334,6 +390,181 @@ const DoctorProfile = () => {
             </Card>
           </TabsContent>
 
+          <TabsContent value="credentials">
+            <Card>
+              <form onSubmit={handleSubmit}>
+                <CardHeader>
+                  <CardTitle>Diplômes et accréditations</CardTitle>
+                  <CardDescription>
+                    Ajoutez vos diplômes et informations d'accréditation professionnelle
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="licenseNumber">Numéro de licence</Label>
+                      <Input
+                        id="licenseNumber"
+                        name="licenseNumber"
+                        value={profileData.licenseNumber}
+                        onChange={handleInputChange}
+                        placeholder="Ex: MD12345"
+                        aria-label="Numéro de licence"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="inpeCode">Code INPE</Label>
+                      <Input
+                        id="inpeCode"
+                        name="inpeCode"
+                        value={profileData.inpeCode}
+                        onChange={handleInputChange}
+                        placeholder="Ex: INPE7890"
+                        aria-label="Code INPE"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="councilCard">Carte du conseil de l'Ordre</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="councilCard"
+                          type="file"
+                          className="hidden"
+                          aria-label="Télécharger une carte du conseil de l'Ordre"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0] || null;
+                            handleFileChange('councilCard', file);
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => document.getElementById('councilCard')?.click()}
+                          className="flex-1"
+                          aria-label="Sélectionner un fichier pour la carte du conseil"
+                        >
+                          <Upload className="mr-2 h-4 w-4" />
+                          {profileData.councilCardFilename ? 'Changer de fichier' : 'Télécharger'}
+                        </Button>
+                        {profileData.councilCardFilename && (
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            onClick={() => {
+                              setProfileData(prev => ({
+                                ...prev,
+                                councilCard: null,
+                                councilCardFilename: ''
+                              }));
+                            }}
+                            aria-label="Supprimer le fichier"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                      {profileData.councilCardFilename && (
+                        <div className="flex items-center text-sm text-green-600 mt-1">
+                          <FileCheck className="h-4 w-4 mr-1" />
+                          {profileData.councilCardFilename}
+                        </div>
+                      )}
+                      <p className="text-xs text-gray-500">
+                        Formats acceptés: PDF, JPG ou PNG. Taille max: 5MB
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="diploma">Diplôme médical</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="diploma"
+                          type="file"
+                          className="hidden"
+                          aria-label="Télécharger un diplôme médical"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0] || null;
+                            handleFileChange('diploma', file);
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => document.getElementById('diploma')?.click()}
+                          className="flex-1"
+                          aria-label="Sélectionner un fichier pour le diplôme"
+                        >
+                          <Upload className="mr-2 h-4 w-4" />
+                          {profileData.diplomaFilename ? 'Changer de fichier' : 'Télécharger'}
+                        </Button>
+                        {profileData.diplomaFilename && (
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            onClick={() => {
+                              setProfileData(prev => ({
+                                ...prev,
+                                diploma: null,
+                                diplomaFilename: ''
+                              }));
+                            }}
+                            aria-label="Supprimer le fichier"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                      {profileData.diplomaFilename && (
+                        <div className="flex items-center text-sm text-green-600 mt-1">
+                          <FileCheck className="h-4 w-4 mr-1" />
+                          {profileData.diplomaFilename}
+                        </div>
+                      )}
+                      <p className="text-xs text-gray-500">
+                        Formats acceptés: PDF, JPG ou PNG. Taille max: 5MB
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t">
+                    <h3 className="text-lg font-medium mb-4">Accréditations supplémentaires</h3>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Ajoutez d'autres certifications ou accréditations pertinentes pour votre pratique.
+                    </p>
+                    <Button 
+                      type="button" 
+                      variant="outline"
+                      aria-label="Ajouter une accréditation"
+                    >
+                      Ajouter une accréditation
+                    </Button>
+                  </div>
+                </CardContent>
+                <CardFooter className="flex justify-between">
+                  <Button variant="outline">Annuler</Button>
+                  <Button type="submit" disabled={isSaving}>
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Enregistrement...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        Enregistrer
+                      </>
+                    )}
+                  </Button>
+                </CardFooter>
+              </form>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="schedule">
             <Card>
               <form onSubmit={handleSubmit}>
@@ -424,14 +655,63 @@ const DoctorProfile = () => {
                   </div>
                   
                   <div className="pt-4">
-                    <h3 className="text-lg font-medium mb-4">Périodes de congé</h3>
+                    <h3 className="text-lg font-medium mb-4">Bloquer des dates</h3>
                     <div className="border rounded-md p-4">
                       <p className="text-sm text-gray-500 mb-4">
-                        Ajoutez des périodes de congé pendant lesquelles vous ne serez pas disponible pour des rendez-vous.
+                        Sélectionnez les dates pendant lesquelles vous ne serez pas disponible (congés, formations, etc.)
                       </p>
-                      <Button type="button" variant="outline">
-                        Ajouter une période de congé
-                      </Button>
+                      
+                      <div className="mb-4">
+                        <Label>Dates bloquées</Label>
+                        <Calendar
+                          mode="multiple"
+                          selected={profileData.unavailableDates}
+                          onSelect={(dates) => {
+                            if (Array.isArray(dates)) {
+                              setProfileData(prev => ({...prev, unavailableDates: dates}));
+                            }
+                          }}
+                          className="rounded-md border mt-2 bg-popover pointer-events-auto z-50"
+                          disabled={(date) => {
+                            // Disable dates in the past
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            return date < today;
+                          }}
+                        />
+                      </div>
+                      
+                      {profileData.unavailableDates.length > 0 && (
+                        <div className="mt-4">
+                          <h4 className="text-sm font-medium mb-2">Dates sélectionnées :</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {profileData.unavailableDates.map((date, index) => (
+                              <div 
+                                key={index} 
+                                className="px-3 py-1 bg-gray-100 rounded-full text-sm flex items-center"
+                              >
+                                {date.toLocaleDateString('fr-FR')}
+                                <button
+                                  type="button"
+                                  className="ml-2 text-gray-500 hover:text-red-500"
+                                  onClick={() => {
+                                    const newDates = profileData.unavailableDates.filter(
+                                      (_, i) => i !== index
+                                    );
+                                    setProfileData(prev => ({
+                                      ...prev,
+                                      unavailableDates: newDates
+                                    }));
+                                  }}
+                                  aria-label="Supprimer cette date"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>

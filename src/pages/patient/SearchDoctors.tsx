@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { doctors, specialties, cities } from '../../lib/mock-data';
 import { toast } from "@/components/ui/use-toast";
+import PaymentStep from '../../components/booking/PaymentStep';
 
 interface Doctor {
   id: string;
@@ -35,6 +36,7 @@ interface Doctor {
   education: { degree: string; institution: string; year: string }[];
   availableDays: string[];
   timeSlots: string[];
+  consultationPrice?: number;
 }
 
 interface DoctorCardProps {
@@ -259,12 +261,22 @@ const SearchDoctors = () => {
   const [filteredDoctors, setFilteredDoctors] = useState<Doctor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [bookingStep, setBookingStep] = useState<'profile' | 'payment' | 'confirmation'>('profile');
+  const [appointmentDate, setAppointmentDate] = useState<string>('');
   
   useEffect(() => {
     // Simulate API call
     const fetchDoctors = async () => {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      setFilteredDoctors(doctors);
+      
+      // Add consultation price to doctors if not present
+      const doctorsWithPrice = doctors.map(doctor => ({
+        ...doctor,
+        consultationPrice: doctor.consultationPrice || Math.floor(Math.random() * 300) + 200, // Random price between 200-500 MAD
+      }));
+      
+      setFilteredDoctors(doctorsWithPrice);
       setIsLoading(false);
     };
     
@@ -272,7 +284,7 @@ const SearchDoctors = () => {
   }, []);
   
   useEffect(() => {
-    let result = [...doctors];
+    let result = [...filteredDoctors];
     
     // Apply search filter
     if (searchTerm) {
@@ -304,16 +316,39 @@ const SearchDoctors = () => {
   
   const handleBookAppointment = (doctor: Doctor) => {
     setSelectedDoctor(doctor);
+    setBookingStep('profile');
   };
   
-  const handleConfirmAppointment = (slot: string) => {
+  const handleSelectTimeSlot = (slot: string) => {
+    setSelectedSlot(slot);
+    
+    // Format the appointment date
+    const selectedDateObj = new Date();
+    const formattedDate = selectedDateObj.toLocaleDateString('fr-FR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      weekday: 'long'
+    });
+    
+    setAppointmentDate(formattedDate);
+    setBookingStep('payment');
+  };
+  
+  const handlePaymentComplete = () => {
     // In a real app, this would call an API to create the appointment
     toast({
       title: "Rendez-vous confirmé",
       description: `Votre rendez-vous avec ${selectedDoctor?.name} a été confirmé.`,
     });
     setSelectedDoctor(null);
+    setSelectedSlot(null);
+    setBookingStep('profile');
     navigate('/patient/appointments');
+  };
+  
+  const handleBackToProfile = () => {
+    setBookingStep('profile');
   };
 
   return (
@@ -407,11 +442,22 @@ const SearchDoctors = () => {
                 <Loader2 className="h-8 w-8 text-tbibdaba-teal animate-spin" />
               </div>
             ) : selectedDoctor ? (
-              <DoctorProfile 
-                doctor={selectedDoctor}
-                onClose={() => setSelectedDoctor(null)}
-                onBookAppointment={handleConfirmAppointment}
-              />
+              bookingStep === 'profile' ? (
+                <DoctorProfile 
+                  doctor={selectedDoctor}
+                  onClose={() => setSelectedDoctor(null)}
+                  onBookAppointment={handleSelectTimeSlot}
+                />
+              ) : bookingStep === 'payment' ? (
+                <PaymentStep 
+                  onBack={handleBackToProfile}
+                  onComplete={handlePaymentComplete}
+                  amount={selectedDoctor.consultationPrice || 350}
+                  doctorName={selectedDoctor.name}
+                  appointmentDate={appointmentDate}
+                  appointmentTime={selectedSlot || ''}
+                />
+              ) : null
             ) : filteredDoctors.length > 0 ? (
               <div>
                 <div className="flex items-center justify-between mb-4">

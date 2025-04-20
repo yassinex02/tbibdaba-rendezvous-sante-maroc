@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from "@/components/ui/use-toast";
 
@@ -19,6 +18,7 @@ interface AuthContextType {
   register: (userData: any, role: 'patient' | 'doctor') => Promise<boolean>;
   logout: () => void;
   isAuthenticated: boolean;
+  validateInsurance: (provider: string, policyNumber: string) => { valid: boolean; message?: string };
 }
 
 // Create context with default values
@@ -29,6 +29,7 @@ const AuthContext = createContext<AuthContextType>({
   register: async () => false,
   logout: () => {},
   isAuthenticated: false,
+  validateInsurance: () => ({ valid: false }),
 });
 
 // Mock user data
@@ -62,6 +63,30 @@ const MOCK_USERS = {
       specialty: 'Pédiatrie',
     },
   ],
+};
+
+// Mock insurance providers and their validation rules
+const VALID_INSURANCE = {
+  'CNOPS': {
+    pattern: /^CN\d{8}$/,
+    message: 'Le numéro de CNOPS doit commencer par CN suivi de 8 chiffres',
+  },
+  'CNSS': {
+    pattern: /^CS\d{8}$/,
+    message: 'Le numéro de CNSS doit commencer par CS suivi de 8 chiffres',
+  },
+  'AMO': {
+    pattern: /^AM\d{8}$/,
+    message: 'Le numéro d\'AMO doit commencer par AM suivi de 8 chiffres',
+  },
+  'RMA': {
+    pattern: /^RM\d{8}$/,
+    message: 'Le numéro de RMA doit commencer par RM suivi de 8 chiffres',
+  },
+  'MAMDA': {
+    pattern: /^MA\d{8}$/,
+    message: 'Le numéro de MAMDA doit commencer par MA suivi de 8 chiffres',
+  },
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -168,6 +193,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  // Insurance validation function
+  const validateInsurance = (provider: string, policyNumber: string) => {
+    // If either field is empty, return invalid with no message
+    if (!provider || !policyNumber.trim()) {
+      return { valid: false };
+    }
+
+    // Check if provider exists
+    if (!VALID_INSURANCE[provider as keyof typeof VALID_INSURANCE]) {
+      return { 
+        valid: false, 
+        message: 'Ce fournisseur d\'assurance n\'est pas reconnu'
+      };
+    }
+
+    // Validate policy number against pattern
+    const insuranceRules = VALID_INSURANCE[provider as keyof typeof VALID_INSURANCE];
+    if (!insuranceRules.pattern.test(policyNumber)) {
+      return {
+        valid: false,
+        message: insuranceRules.message
+      };
+    }
+
+    // All validation passed
+    return { valid: true };
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -177,6 +230,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         register,
         logout,
         isAuthenticated: !!user,
+        validateInsurance,
       }}
     >
       {children}

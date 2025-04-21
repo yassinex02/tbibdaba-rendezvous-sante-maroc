@@ -171,6 +171,7 @@ const RegisterPatient = () => {
     
     try {
       const { confirmPassword, agreeTos, ...userData } = formData;
+      console.log("Submitting user data:", userData);
       const success = await register(userData, 'patient');
       
       if (success) {
@@ -192,8 +193,22 @@ const RegisterPatient = () => {
     }
   };
 
-  // Check if form is valid for submission - Fixed logic to properly check required fields
+  // Fixed isFormValid function with more accurate validation
   const isFormValid = () => {
+    // Log form state to help debug the validation
+    console.log("Form validation check:", {
+      name: !!formData.name,
+      email: !!formData.email && /\S+@\S+\.\S+/.test(formData.email),
+      password: !!formData.password && formData.password.length >= 6,
+      confirmPassword: formData.password === formData.confirmPassword,
+      phone: !!formData.phone,
+      city: !!formData.city,
+      birthdate: !!formData.birthdate,
+      gender: !!formData.gender,
+      agreeTos: formData.agreeTos,
+      insurance: !formData.insuranceProvider || !formData.insuranceNumber || insuranceValid
+    });
+    
     // Check required fields
     if (!formData.name || 
         !formData.email || 
@@ -227,7 +242,13 @@ const RegisterPatient = () => {
       return insuranceValid;
     }
     
-    // If no insurance provided, or only one field is empty (which would be caught by validateForm)
+    // If insurance fields are partially filled, form is invalid
+    if ((formData.insuranceProvider && !formData.insuranceNumber) || 
+        (!formData.insuranceProvider && formData.insuranceNumber)) {
+      return false;
+    }
+    
+    // If no insurance provided, or only one field is empty (which would be caught above)
     return true;
   };
 

@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { doctorAppointments } from '../../lib/mock-data';
 import { toast } from "@/components/ui/use-toast";
+import { format } from 'date-fns';
 
 interface Appointment {
   id: string;
@@ -131,6 +132,7 @@ const DoctorAppointments = () => {
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [showCalendarDropdown, setShowCalendarDropdown] = useState(false);
 
   const handleCreateAppointment = () => {
     toast({
@@ -199,6 +201,11 @@ const DoctorAppointments = () => {
     setSelectedDate(undefined);
   };
 
+  const formatDateForDisplay = (date?: Date) => {
+    if (!date) return 'Sélectionner une date';
+    return format(date, 'dd/MM/yyyy');
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -263,22 +270,30 @@ const DoctorAppointments = () => {
                   </div>
                   
                   <div className="grid w-full max-w-sm items-center gap-1.5">
-                    <Select 
-                      value={selectedDate ? selectedDate.toISOString() : ''} 
-                      onValueChange={(value) => setSelectedDate(value ? new Date(value) : undefined)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner une date" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <Calendar 
-                          mode="single" 
-                          selected={selectedDate} 
-                          onSelect={setSelectedDate} 
-                          className="border-none"
-                        />
-                      </SelectContent>
-                    </Select>
+                    <div className="relative">
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowCalendarDropdown(!showCalendarDropdown)}
+                        className="w-full justify-start text-left font-normal"
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        {formatDateForDisplay(selectedDate)}
+                      </Button>
+                      {showCalendarDropdown && (
+                        <div className="absolute z-50 mt-1 rounded-md border bg-white shadow-lg">
+                          <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={(date) => {
+                              setSelectedDate(date);
+                              setShowCalendarDropdown(false);
+                            }}
+                            className="rounded-md border"
+                            initialFocus
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
                   <div>

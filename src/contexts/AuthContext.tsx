@@ -1,5 +1,8 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { User, Session } from '@supabase/supabase-js';
 
 // Define user types
 interface User {
@@ -32,7 +35,7 @@ const AuthContext = createContext<AuthContextType>({
   validateInsurance: () => ({ valid: false }),
 });
 
-// Mock user data
+// Mock user data (fallback for development)
 const MOCK_USERS = {
   patients: [
     {
@@ -91,46 +94,138 @@ const VALID_INSURANCE = {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Initialize auth state
   useEffect(() => {
-    const storedUser = localStorage.getItem('tbibdabaUser');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log("Auth state changed:", event, session);
+        setSession(session);
+        
+        if (session?.user) {
+          // Get user data from storage or set basic user info
+          const userData = localStorage.getItem(`tbibdabaUserData_${session.user.id}`);
+          
+          if (userData) {
+            setUser(JSON.parse(userData));
+          } else {
+            // Set minimal user data based on session
+            setTimeout(() => {
+              // Use setTimeout to avoid potential deadlocks
+              // This should ideally fetch user profile from a profiles table
+              setUser({
+                id: session.user.id,
+                email: session.user.email || '',
+                name: session.user.user_metadata?.name || 'User',
+                role: session.user.user_metadata?.role || 'patient',
+              });
+            }, 0);
+          }
+        } else {
+          setUser(null);
+        }
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("Initial session check:", session);
+      setSession(session);
+      
+      if (session?.user) {
+        // Get user data from storage or set basic user info
+        const userData = localStorage.getItem(`tbibdabaUserData_${session.user.id}`);
+        
+        if (userData) {
+          setUser(JSON.parse(userData));
+        } else {
+          // Set minimal user data based on session
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.name || 'User',
+            role: session.user.user_metadata?.role || 'patient',
+          });
+        }
+      }
+      
+      setIsLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Login function
   const login = async (email: string, password: string, role: 'patient' | 'doctor'): Promise<boolean> => {
     setIsLoading(true);
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Check if user exists in mock data
-      const userList = role === 'patient' ? MOCK_USERS.patients : MOCK_USERS.doctors;
-      const foundUser = userList.find(u => u.email === email && u.password === password);
-      
-      if (foundUser) {
-        // Omit password before storing
-        const { password, ...userWithoutPassword } = foundUser;
-        localStorage.setItem('tbibdabaUser', JSON.stringify(userWithoutPassword));
-        setUser(userWithoutPassword as User);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        console.error("Supabase login error:", error);
+        
+        // Fallback to mock data for development/demo purposes
+        const userList = role === 'patient' ? MOCK_USERS.patients : MOCK_USERS.doctors;
+        const foundUser = userList.find(u => u.email === email && u.password === password);
+        
+        if (foundUser) {
+          // Omit password before storing
+          const { password, ...userWithoutPassword } = foundUser;
+          const userData = userWithoutPassword as User;
+          
+          localStorage.setItem('tbibdabaUser', JSON.stringify(userData));
+          localStorage.setItem(`tbibdabaUserData_${userData.id}`, JSON.stringify(userData));
+          setUser(userData);
+          
+          toast({
+            title: "Connexion réussie (Mode Demo)",
+            description: `Bienvenue, ${foundUser.name}!`,
+          });
+          return true;
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Échec de connexion",
+            description: error.message || "Email ou mot de passe incorrect",
+          });
+          return false;
+        }
+      }
+
+      // If Supabase login successful
+      if (data.user) {
+        // Store role information in user metadata
+        await supabase.auth.updateUser({
+          data: { role }
+        });
+
+        // Create or fetch user data
+        const userData: User = {
+          id: data.user.id,
+          email: data.user.email || '',
+          name: data.user.user_metadata?.name || email.split('@')[0],
+          role: role,
+        };
+
+        localStorage.setItem(`tbibdabaUserData_${userData.id}`, JSON.stringify(userData));
+        setUser(userData);
+        
         toast({
           title: "Connexion réussie",
-          description: `Bienvenue, ${foundUser.name}!`,
+          description: `Bienvenue!`,
         });
         return true;
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Échec de connexion",
-          description: "Email ou mot de passe incorrect",
-        });
-        return false;
       }
+      
+      return false;
     } catch (error) {
       console.error("Login error:", error);
       toast({
@@ -148,28 +243,77 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (userData: any, role: 'patient' | 'doctor'): Promise<boolean> => {
     setIsLoading(true);
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log("Registering user with Supabase:", { email: userData.email, role });
       
-      // In a real app, this would create a user record in a database
-      // For demo purposes, we'll just simulate a successful registration
-      const newUser = {
-        id: Math.random().toString(36).substr(2, 9),
-        ...userData,
-        role,
-        subscription: role === 'doctor' ? 'free' : undefined
-      };
-      
-      // Omit password before storing
-      const { password, ...userWithoutPassword } = newUser;
-      localStorage.setItem('tbibdabaUser', JSON.stringify(userWithoutPassword));
-      setUser(userWithoutPassword as User);
-      
-      toast({
-        title: "Inscription réussie",
-        description: `Bienvenue, ${userData.name}!`,
+      // Register with Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
+        options: {
+          data: {
+            name: userData.name,
+            role: role,
+            // Include other user metadata as needed
+            phone: userData.phone,
+            city: userData.city,
+            address: userData.address,
+            birthdate: userData.birthdate,
+            gender: userData.gender,
+            // For doctors
+            specialty: userData.specialty,
+            subscription: role === 'doctor' ? 'free' : undefined
+          }
+        }
       });
-      return true;
+      
+      if (error) {
+        console.error("Supabase registration error:", error);
+        
+        // Fallback to mock registration for development/demo
+        console.log("Falling back to mock registration");
+        const newUser = {
+          id: Math.random().toString(36).substr(2, 9),
+          ...userData,
+          role,
+          subscription: role === 'doctor' ? 'free' : undefined
+        };
+        
+        // Omit password before storing
+        const { password, confirmPassword, ...userWithoutPassword } = newUser;
+        const userToStore = userWithoutPassword as User;
+        
+        localStorage.setItem('tbibdabaUser', JSON.stringify(userToStore));
+        localStorage.setItem(`tbibdabaUserData_${userToStore.id}`, JSON.stringify(userToStore));
+        setUser(userToStore);
+        
+        toast({
+          title: "Inscription réussie (Mode Demo)",
+          description: `Bienvenue, ${userData.name}!`,
+        });
+        return true;
+      }
+
+      // If Supabase registration successful
+      if (data.user) {
+        const userToStore: User = {
+          id: data.user.id,
+          name: userData.name,
+          email: userData.email,
+          role: role,
+          subscription: role === 'doctor' ? 'free' : undefined
+        };
+        
+        localStorage.setItem(`tbibdabaUserData_${userToStore.id}`, JSON.stringify(userToStore));
+        setUser(userToStore);
+        
+        toast({
+          title: "Inscription réussie",
+          description: `Bienvenue, ${userData.name}!`,
+        });
+        return true;
+      }
+      
+      return false;
     } catch (error) {
       console.error("Register error:", error);
       toast({
@@ -184,13 +328,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Logout function
-  const logout = () => {
-    localStorage.removeItem('tbibdabaUser');
-    setUser(null);
-    toast({
-      title: "Déconnexion réussie",
-      description: "À bientôt!",
-    });
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+      localStorage.removeItem('tbibdabaUser');
+      setUser(null);
+      toast({
+        title: "Déconnexion réussie",
+        description: "À bientôt!",
+      });
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: "Une erreur s'est produite lors de la déconnexion.",
+      });
+    }
   };
 
   // Insurance validation function

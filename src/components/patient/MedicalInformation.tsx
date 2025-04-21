@@ -1,13 +1,14 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Save, Loader2 } from 'lucide-react';
 import { toast } from "@/components/ui/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PlusCircle, Trash2, Save, Loader2 } from 'lucide-react';
 
 interface MedicalCondition {
   id: string;
@@ -22,373 +23,331 @@ interface Medication {
 }
 
 interface MedicalInformationProps {
-  patientId: string;
+  userId: string;
+  initialData?: {
+    conditions: MedicalCondition[];
+    medications: Medication[];
+    allergies: string;
+    bloodType: string;
+    weight: string;
+    height: string;
+    notes: string;
+  };
+  onUpdate?: (data: any) => void;
 }
 
-const MedicalInformation = ({ patientId }: MedicalInformationProps) => {
+const bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
+const commonConditions = [
+  { id: 'diabetes', label: 'Diabète' },
+  { id: 'hypertension', label: 'Hypertension' },
+  { id: 'asthma', label: 'Asthme' },
+  { id: 'heart_disease', label: 'Maladie cardiaque' },
+  { id: 'arthritis', label: 'Arthrite' },
+  { id: 'depression', label: 'Dépression' },
+  { id: 'anxiety', label: 'Anxiété' },
+  { id: 'cancer', label: 'Cancer' },
+  { id: 'thyroid', label: 'Problèmes de thyroïde' }
+];
+
+const MedicalInformation = ({ userId, initialData, onUpdate }: MedicalInformationProps) => {
+  const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
-  // Common medical conditions
-  const commonConditions: MedicalCondition[] = [
-    { id: 'diabetes', name: 'Diabète' },
-    { id: 'hypertension', name: 'Hypertension' },
-    { id: 'asthma', name: 'Asthme' },
-    { id: 'heartDisease', name: 'Maladie cardiaque' },
-    { id: 'arthritis', name: 'Arthrite' },
-    { id: 'cancer', name: 'Cancer' },
-    { id: 'depression', name: 'Dépression' },
-    { id: 'thyroid', name: 'Problèmes de thyroïde' },
-  ];
-  
-  const [medicalData, setMedicalData] = useState({
-    conditions: [] as string[],
-    otherConditions: '',
-    medications: [] as Medication[],
+  const defaultData = {
+    conditions: [],
+    medications: [],
     allergies: '',
     bloodType: '',
-    height: '',
     weight: '',
-    emergencyContact: {
-      name: '',
-      phone: '',
-      relationship: '',
-    },
-  });
+    height: '',
+    notes: ''
+  };
   
-  const [newMedication, setNewMedication] = useState({
-    name: '',
-    dosage: '',
-    frequency: '',
-  });
+  const [medicalData, setMedicalData] = useState(initialData || defaultData);
+  const [newMedication, setNewMedication] = useState({ name: '', dosage: '', frequency: '' });
+  const [selectedConditions, setSelectedConditions] = useState<string[]>([]);
   
-  const handleConditionChange = (condition: string, checked: boolean) => {
+  useEffect(() => {
+    if (initialData) {
+      setMedicalData(initialData);
+      setSelectedConditions(initialData.conditions.map(c => c.id));
+    }
+  }, [initialData]);
+
+  const handleConditionToggle = (conditionId: string, checked: boolean) => {
     if (checked) {
-      setMedicalData(prev => ({
-        ...prev,
-        conditions: [...prev.conditions, condition],
-      }));
+      const condition = commonConditions.find(c => c.id === conditionId);
+      if (condition) {
+        const newCondition = { id: conditionId, name: condition.label };
+        setMedicalData({
+          ...medicalData,
+          conditions: [...medicalData.conditions, newCondition]
+        });
+        setSelectedConditions([...selectedConditions, conditionId]);
+      }
     } else {
-      setMedicalData(prev => ({
-        ...prev,
-        conditions: prev.conditions.filter(c => c !== condition),
-      }));
+      setMedicalData({
+        ...medicalData,
+        conditions: medicalData.conditions.filter(c => c.id !== conditionId)
+      });
+      setSelectedConditions(selectedConditions.filter(id => id !== conditionId));
     }
   };
-  
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    
-    // Handle nested fields
-    if (name.includes('.')) {
-      const [parent, child] = name.split('.');
-      setMedicalData(prev => ({
-        ...prev,
-        [parent]: {
-          ...prev[parent as keyof typeof prev],
-          [child]: value,
-        },
-      }));
-    } else {
-      setMedicalData(prev => ({
-        ...prev,
-        [name]: value,
-      }));
+
+  const handleAddMedication = () => {
+    if (newMedication.name && newMedication.dosage) {
+      const medication = {
+        ...newMedication,
+        id: Date.now().toString()
+      };
+      
+      setMedicalData({
+        ...medicalData,
+        medications: [...medicalData.medications, medication]
+      });
+      setNewMedication({ name: '', dosage: '', frequency: '' });
     }
   };
-  
-  const handleNewMedicationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setNewMedication(prev => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-  
-  const addMedication = () => {
-    if (!newMedication.name) return;
-    
-    const medication: Medication = {
-      id: `med-${Date.now()}`,
-      ...newMedication,
-    };
-    
-    setMedicalData(prev => ({
-      ...prev,
-      medications: [...prev.medications, medication],
-    }));
-    
-    // Reset form
-    setNewMedication({
-      name: '',
-      dosage: '',
-      frequency: '',
+
+  const handleRemoveMedication = (id: string) => {
+    setMedicalData({
+      ...medicalData,
+      medications: medicalData.medications.filter(med => med.id !== id)
     });
   };
-  
-  const removeMedication = (id: string) => {
-    setMedicalData(prev => ({
-      ...prev,
-      medications: prev.medications.filter(med => med.id !== id),
-    }));
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setMedicalData({ ...medicalData, [name]: value });
   };
-  
+
+  const handleMedicationChange = (field: string, value: string) => {
+    setNewMedication({ ...newMedication, [field]: value });
+  };
+
+  const handleBloodTypeChange = (value: string) => {
+    setMedicalData({ ...medicalData, bloodType: value });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
     
-    // In a real app, this would send data to an API
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
-    console.log('Medical data saved:', medicalData);
+    if (onUpdate) {
+      onUpdate(medicalData);
+    }
     
     toast({
-      title: "Informations médicales enregistrées",
-      description: "Vos informations médicales ont été mises à jour avec succès.",
+      title: "Informations médicales mises à jour",
+      description: "Vos informations ont été enregistrées avec succès."
     });
     
     setIsSaving(false);
   };
-  
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-8">
+        <Loader2 className="h-8 w-8 text-tbibdaba-teal animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Informations médicales</CardTitle>
         <CardDescription>
-          Ces informations seront partagées avec les médecins lors de vos rendez-vous
+          Ces informations aideront votre médecin à mieux comprendre votre état de santé
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium mb-4">Conditions médicales chroniques</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {commonConditions.map(condition => (
-                  <div key={condition.id} className="flex items-center space-x-2">
-                    <Checkbox 
-                      id={condition.id}
-                      checked={medicalData.conditions.includes(condition.id)}
-                      onCheckedChange={checked => 
-                        handleConditionChange(condition.id, checked as boolean)
-                      }
-                      aria-label={condition.name}
-                    />
-                    <label
-                      htmlFor={condition.id}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      {condition.name}
-                    </label>
+      <form onSubmit={handleSubmit}>
+        <CardContent className="space-y-6">
+          <div>
+            <h3 className="text-lg font-medium mb-3">Conditions médicales</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {commonConditions.map((condition) => (
+                <div key={condition.id} className="flex items-center space-x-2">
+                  <Checkbox 
+                    id={`condition-${condition.id}`}
+                    checked={selectedConditions.includes(condition.id)}
+                    onCheckedChange={(checked) => 
+                      handleConditionToggle(condition.id, checked as boolean)
+                    }
+                  />
+                  <label
+                    htmlFor={`condition-${condition.id}`}
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    {condition.label}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <div className="border-t pt-4">
+            <h3 className="text-lg font-medium mb-3">Médicaments actuels</h3>
+            <div className="space-y-4">
+              {medicalData.medications.map((medication) => (
+                <div key={medication.id} className="flex items-center gap-2 bg-gray-50 p-3 rounded-md">
+                  <div className="flex-1">
+                    <p className="font-medium">{medication.name}</p>
+                    <p className="text-sm text-gray-500">
+                      {medication.dosage} {medication.frequency ? `- ${medication.frequency}` : ''}
+                    </p>
                   </div>
-                ))}
-              </div>
-              
-              <div className="mt-4">
-                <Label htmlFor="otherConditions">Autres conditions</Label>
-                <Textarea
-                  id="otherConditions"
-                  name="otherConditions"
-                  placeholder="Listez d'autres conditions médicales si nécessaire"
-                  value={medicalData.otherConditions}
-                  onChange={handleInputChange}
-                  rows={3}
-                  aria-label="Autres conditions médicales"
-                />
-              </div>
-            </div>
-            
-            <div className="border-t pt-6">
-              <h3 className="text-lg font-medium mb-4">Médicaments actuels</h3>
-              
-              {medicalData.medications.length > 0 && (
-                <div className="space-y-3 mb-4">
-                  {medicalData.medications.map((med) => (
-                    <div key={med.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-                      <div>
-                        <div className="font-medium">{med.name}</div>
-                        <div className="text-sm text-gray-500">
-                          {med.dosage} - {med.frequency}
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeMedication(med.id)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                        aria-label={`Supprimer ${med.name}`}
-                      >
-                        ✕
-                      </Button>
-                    </div>
-                  ))}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleRemoveMedication(medication.id)}
+                    aria-label="Supprimer ce médicament"
+                  >
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </Button>
                 </div>
-              )}
+              ))}
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="name">Médicament</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    value={newMedication.name}
-                    onChange={handleNewMedicationChange}
-                    placeholder="Nom du médicament"
-                    aria-label="Nom du médicament"
-                  />
+              <div className="grid gap-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label htmlFor="med-name">Nom du médicament</Label>
+                    <Input
+                      id="med-name"
+                      value={newMedication.name}
+                      onChange={(e) => handleMedicationChange('name', e.target.value)}
+                      placeholder="Ex: Aspirine"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="med-dosage">Dosage</Label>
+                    <Input
+                      id="med-dosage"
+                      value={newMedication.dosage}
+                      onChange={(e) => handleMedicationChange('dosage', e.target.value)}
+                      placeholder="Ex: 500mg"
+                    />
+                  </div>
                 </div>
                 <div>
-                  <Label htmlFor="dosage">Dosage</Label>
+                  <Label htmlFor="med-frequency">Fréquence (optionnel)</Label>
                   <Input
-                    id="dosage"
-                    name="dosage"
-                    value={newMedication.dosage}
-                    onChange={handleNewMedicationChange}
-                    placeholder="ex: 500mg"
-                    aria-label="Dosage du médicament"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="frequency">Fréquence</Label>
-                  <Input
-                    id="frequency"
-                    name="frequency"
+                    id="med-frequency"
                     value={newMedication.frequency}
-                    onChange={handleNewMedicationChange}
-                    placeholder="ex: 2 fois par jour"
-                    aria-label="Fréquence de prise"
+                    onChange={(e) => handleMedicationChange('frequency', e.target.value)}
+                    placeholder="Ex: 1 fois par jour"
                   />
                 </div>
-              </div>
-              
-              <Button
-                type="button"
-                variant="outline"
-                className="mt-3"
-                onClick={addMedication}
-                disabled={!newMedication.name}
-                aria-label="Ajouter un médicament"
-              >
-                + Ajouter un médicament
-              </Button>
-            </div>
-            
-            <div className="border-t pt-6">
-              <h3 className="text-lg font-medium mb-4">Allergies</h3>
-              <Textarea
-                id="allergies"
-                name="allergies"
-                placeholder="Listez vos allergies connues (médicaments, aliments, etc.)"
-                value={medicalData.allergies}
-                onChange={handleInputChange}
-                rows={3}
-                aria-label="Allergies connues"
-              />
-            </div>
-            
-            <div className="border-t pt-6">
-              <h3 className="text-lg font-medium mb-4">Informations générales</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="bloodType">Groupe sanguin</Label>
-                  <Input
-                    id="bloodType"
-                    name="bloodType"
-                    value={medicalData.bloodType}
-                    onChange={handleInputChange}
-                    placeholder="ex: A+"
-                    aria-label="Groupe sanguin"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="height">Taille (cm)</Label>
-                  <Input
-                    id="height"
-                    name="height"
-                    type="number"
-                    value={medicalData.height}
-                    onChange={handleInputChange}
-                    placeholder="170"
-                    aria-label="Taille en centimètres"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="weight">Poids (kg)</Label>
-                  <Input
-                    id="weight"
-                    name="weight"
-                    type="number"
-                    value={medicalData.weight}
-                    onChange={handleInputChange}
-                    placeholder="70"
-                    aria-label="Poids en kilogrammes"
-                  />
-                </div>
-              </div>
-            </div>
-            
-            <div className="border-t pt-6">
-              <h3 className="text-lg font-medium mb-4">Contact d'urgence</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="emergencyName">Nom</Label>
-                  <Input
-                    id="emergencyName"
-                    name="emergencyContact.name"
-                    value={medicalData.emergencyContact.name}
-                    onChange={handleInputChange}
-                    placeholder="Nom du contact"
-                    aria-label="Nom du contact d'urgence"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="emergencyPhone">Téléphone</Label>
-                  <Input
-                    id="emergencyPhone"
-                    name="emergencyContact.phone"
-                    value={medicalData.emergencyContact.phone}
-                    onChange={handleInputChange}
-                    placeholder="+212 6XX XXXXXX"
-                    aria-label="Téléphone du contact d'urgence"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="emergencyRelationship">Relation</Label>
-                  <Input
-                    id="emergencyRelationship"
-                    name="emergencyContact.relationship"
-                    value={medicalData.emergencyContact.relationship}
-                    onChange={handleInputChange}
-                    placeholder="ex: Conjoint, Parent"
-                    aria-label="Relation avec le contact d'urgence"
-                  />
-                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full sm:w-auto mt-1"
+                  onClick={handleAddMedication}
+                  disabled={!newMedication.name || !newMedication.dosage}
+                >
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Ajouter un médicament
+                </Button>
               </div>
             </div>
           </div>
-        </form>
-      </CardContent>
-      <CardFooter>
-        <Button
-          type="submit"
-          onClick={handleSubmit}
-          disabled={isSaving}
-          className="bg-tbibdaba-teal hover:bg-tbibdaba-teal/90 ml-auto"
-          aria-label="Enregistrer les informations médicales"
-        >
-          {isSaving ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Enregistrement...
-            </>
-          ) : (
-            <>
-              <Save className="mr-2 h-4 w-4" />
-              Enregistrer
-            </>
-          )}
-        </Button>
-      </CardFooter>
+          
+          <div className="border-t pt-4">
+            <h3 className="text-lg font-medium mb-3">Informations générales</h3>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="bloodType">Groupe sanguin</Label>
+                <Select
+                  value={medicalData.bloodType}
+                  onValueChange={handleBloodTypeChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {bloodTypes.map(type => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="allergies">Allergies</Label>
+                <Input
+                  id="allergies"
+                  name="allergies"
+                  value={medicalData.allergies}
+                  onChange={handleInputChange}
+                  placeholder="Ex: Pénicilline, arachides..."
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="height">Taille (cm)</Label>
+                <Input
+                  id="height"
+                  name="height"
+                  type="number"
+                  value={medicalData.height}
+                  onChange={handleInputChange}
+                  placeholder="Ex: 175"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="weight">Poids (kg)</Label>
+                <Input
+                  id="weight"
+                  name="weight"
+                  type="number"
+                  value={medicalData.weight}
+                  onChange={handleInputChange}
+                  placeholder="Ex: 70"
+                />
+              </div>
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notes additionnelles</Label>
+            <Textarea
+              id="notes"
+              name="notes"
+              value={medicalData.notes}
+              onChange={handleInputChange}
+              placeholder="Autres informations importantes pour le médecin..."
+              rows={4}
+            />
+          </div>
+        </CardContent>
+        <CardFooter className="flex justify-between">
+          <Button type="button" variant="outline">
+            Annuler
+          </Button>
+          <Button type="submit" disabled={isSaving}>
+            {isSaving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Enregistrement...
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Enregistrer
+              </>
+            )}
+          </Button>
+        </CardFooter>
+      </form>
     </Card>
   );
 };

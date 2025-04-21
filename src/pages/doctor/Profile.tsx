@@ -12,6 +12,7 @@ import { Loader2, Save, Clock, Upload, MailCheck, BellRing, BellOff, Trash2, Fil
 import { useAuth } from '../../contexts/AuthContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cities, specialties } from '../../lib/mock-data';
+import { Calendar } from "@/components/ui/calendar";
 
 const DoctorProfile = () => {
   const { user } = useAuth();
@@ -45,11 +46,9 @@ const DoctorProfile = () => {
   });
 
   useEffect(() => {
-    // Simulate API call to fetch doctor profile data
     const fetchProfileData = async () => {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Mock data - in a real app, this would come from an API
       setProfileData({
         name: user?.name || 'Dr. Utilisateur',
         email: user?.email || 'doctor@example.com',
@@ -109,19 +108,16 @@ const DoctorProfile = () => {
   const handleDateSelect = (date: Date | undefined) => {
     if (!date) return;
     
-    // Check if date is already selected
     const isDateSelected = profileData.unavailableDates.some(
       d => d.toDateString() === date.toDateString()
     );
     
     if (isDateSelected) {
-      // Remove date
       const newDates = profileData.unavailableDates.filter(
         d => d.toDateString() !== date.toDateString()
       );
       setProfileData(prev => ({ ...prev, unavailableDates: newDates }));
     } else {
-      // Add date
       setProfileData(prev => ({
         ...prev,
         unavailableDates: [...prev.unavailableDates, date]
@@ -133,7 +129,6 @@ const DoctorProfile = () => {
     e.preventDefault();
     setIsSaving(true);
     
-    // Log file information to console for debugging
     if (profileData.councilCard) {
       console.log('Council Card:', profileData.councilCard.name, profileData.councilCard.type);
     }
@@ -141,7 +136,6 @@ const DoctorProfile = () => {
       console.log('Diploma:', profileData.diploma.name, profileData.diploma.type);
     }
     
-    // Simulate API call to save profile
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     toast({
@@ -673,7 +667,6 @@ const DoctorProfile = () => {
                           }}
                           className="rounded-md border mt-2 bg-popover pointer-events-auto z-50"
                           disabled={(date) => {
-                            // Disable dates in the past
                             const today = new Date();
                             today.setHours(0, 0, 0, 0);
                             return date < today;

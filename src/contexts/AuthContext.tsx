@@ -1,11 +1,10 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { User, Session } from '@supabase/supabase-js';
+import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 
 // Define user types
-interface User {
+interface AppUser {
   id: string;
   name: string;
   email: string;
@@ -15,7 +14,7 @@ interface User {
 
 // Auth context type definition
 interface AuthContextType {
-  user: User | null;
+  user: AppUser | null;
   isLoading: boolean;
   login: (email: string, password: string, role: 'patient' | 'doctor') => Promise<boolean>;
   register: (userData: any, role: 'patient' | 'doctor') => Promise<boolean>;
@@ -93,7 +92,7 @@ const VALID_INSURANCE = {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -179,7 +178,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (foundUser) {
           // Omit password before storing
           const { password, ...userWithoutPassword } = foundUser;
-          const userData = userWithoutPassword as User;
+          const userData = userWithoutPassword as AppUser;
           
           localStorage.setItem('tbibdabaUser', JSON.stringify(userData));
           localStorage.setItem(`tbibdabaUserData_${userData.id}`, JSON.stringify(userData));
@@ -208,7 +207,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
 
         // Create or fetch user data
-        const userData: User = {
+        const userData: AppUser = {
           id: data.user.id,
           email: data.user.email || '',
           name: data.user.user_metadata?.name || email.split('@')[0],
@@ -280,7 +279,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Omit password before storing
         const { password, confirmPassword, ...userWithoutPassword } = newUser;
-        const userToStore = userWithoutPassword as User;
+        const userToStore = userWithoutPassword as AppUser;
         
         localStorage.setItem('tbibdabaUser', JSON.stringify(userToStore));
         localStorage.setItem(`tbibdabaUserData_${userToStore.id}`, JSON.stringify(userToStore));
@@ -295,7 +294,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // If Supabase registration successful
       if (data.user) {
-        const userToStore: User = {
+        const userToStore: AppUser = {
           id: data.user.id,
           name: userData.name,
           email: userData.email,

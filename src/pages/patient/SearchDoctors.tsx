@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
@@ -34,9 +33,7 @@ import DoctorCard from '@/components/doctors/DoctorCard';
 import { toast } from "@/components/ui/use-toast";
 import BookingSteps from '@/components/booking/BookingSteps';
 import PaymentStep from '@/components/booking/PaymentStep';
-import AvailabilityFilters from '@/components/search/AvailabilityFilters';
 
-// Sample doctor data with consultation price
 const doctorsData = [
   {
     id: '1',
@@ -248,7 +245,6 @@ const doctorsData = [
   }
 ];
 
-// Add more small towns to the cities array
 const additionalCities = [
   'Azrou', 'Ifrane', 'Midelt', 'Sefrou', 'Taounate', 'Taroudant', 'Taza', 'Tiznit',
   'Ouarzazate', 'Errachidia', 'Essaouira', 'Chefchaouen', 'Larache', 'Ksar El Kebir',
@@ -266,7 +262,6 @@ const SearchDoctors = () => {
   const [doctors, setDoctors] = useState(doctorsData);
   const [filteredDoctors, setFilteredDoctors] = useState(doctorsData);
   
-  // Booking state
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState<any>(null);
   const [bookingStep, setBookingStep] = useState(1);
@@ -274,10 +269,8 @@ const SearchDoctors = () => {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
   const [bookingConfirmed, setBookingConfirmed] = useState(false);
 
-  // Get current date
   const today = new Date();
   
-  // Simulate data loading
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
@@ -286,7 +279,6 @@ const SearchDoctors = () => {
     return () => clearTimeout(timer);
   }, []);
   
-  // Filter doctors based on search and filters
   useEffect(() => {
     let results = doctors;
     
@@ -311,7 +303,6 @@ const SearchDoctors = () => {
     }
     
     if (availabilityFilter) {
-      // Add availability filtering logic
       switch(availabilityFilter) {
         case 'today':
           results = results.filter(doctor => doctor.nextAvailable.includes('Aujourd\'hui'));
@@ -356,10 +347,8 @@ const SearchDoctors = () => {
     if (bookingStep < 3) {
       setBookingStep(prev => prev + 1);
     } else {
-      // Final confirmation
       setBookingConfirmed(true);
       
-      // Schedule a reminder 2 hours before the appointment
       if (selectedDate && selectedTimeSlot) {
         const appointmentDateTime = new Date(selectedDate);
         const [hours, minutes] = selectedTimeSlot.split(':').map(Number);
@@ -371,10 +360,8 @@ const SearchDoctors = () => {
         console.log('Reminder scheduled for:', reminderTime);
       }
       
-      // Close dialog after 3 seconds
       setTimeout(() => {
         setIsBookingOpen(false);
-        // Reset booking state
         setBookingStep(1);
         setSelectedDate(undefined);
         setSelectedTimeSlot('');
@@ -391,21 +378,21 @@ const SearchDoctors = () => {
     }
   };
   
-  // Determine if a given date should be disabled
   const isDateDisabled = (date: Date) => {
     if (!selectedDoctor) return true;
     
-    // Disable dates in the past
     if (date < today && date.toDateString() !== today.toDateString()) {
       return true;
     }
     
-    // Get day of week
     const days = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
     const dayName = days[date.getDay()];
     
-    // Disable if doctor doesn't work on this day
     return !selectedDoctor.availableDays.includes(dayName);
+  };
+
+  const handleAvailabilityFilterChange = (filter: string) => {
+    setAvailabilityFilter(filter);
   };
 
   return (
@@ -414,7 +401,6 @@ const SearchDoctors = () => {
         <h1 className="text-3xl font-bold mb-6">Rechercher un médecin</h1>
         
         <div className="grid gap-6 mb-8">
-          {/* Search and filters */}
           <Card>
             <CardContent className="pt-6">
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -437,7 +423,7 @@ const SearchDoctors = () => {
                       <SelectValue placeholder="Spécialité" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Toutes les spécialités</SelectItem>
+                      <SelectItem value="all">Toutes les spécialités</SelectItem>
                       {specialties.map(specialty => (
                         <SelectItem key={specialty} value={specialty}>
                           {specialty}
@@ -453,7 +439,7 @@ const SearchDoctors = () => {
                       <SelectValue placeholder="Ville" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Toutes les villes</SelectItem>
+                      <SelectItem value="all">Toutes les villes</SelectItem>
                       {[...cities, ...additionalCities].sort().map(city => (
                         <SelectItem key={city} value={city}>
                           {city}
@@ -463,17 +449,34 @@ const SearchDoctors = () => {
                   </Select>
                 </div>
                 
-                <AvailabilityFilters 
-                  availabilityFilter={availabilityFilter}
-                  setAvailabilityFilter={setAvailabilityFilter}
-                  showRuralOnly={showRuralOnly}
-                  setShowRuralOnly={setShowRuralOnly}
-                />
+                <div className="flex items-center space-x-2">
+                  <Select value={availabilityFilter} onValueChange={handleAvailabilityFilterChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Disponibilité" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Toutes les disponibilités</SelectItem>
+                      <SelectItem value="today">Aujourd'hui</SelectItem>
+                      <SelectItem value="tomorrow">Demain</SelectItem>
+                      <SelectItem value="thisWeek">Cette semaine</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  <div className="flex items-center space-x-2 ml-2">
+                    <input
+                      type="checkbox"
+                      id="ruralOnly"
+                      checked={showRuralOnly}
+                      onChange={() => setShowRuralOnly(!showRuralOnly)}
+                      className="rounded border-gray-300 text-tbibdaba-teal focus:ring-tbibdaba-teal"
+                    />
+                    <label htmlFor="ruralOnly" className="text-sm">Rural</label>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
           
-          {/* Results */}
           {isLoading ? (
             <div className="flex justify-center items-center py-16">
               <Loader2 className="h-8 w-8 text-tbibdaba-teal animate-spin" />
@@ -519,7 +522,6 @@ const SearchDoctors = () => {
         </div>
       </div>
 
-      {/* Booking Dialog */}
       <Dialog open={isBookingOpen} onOpenChange={setIsBookingOpen}>
         <DialogContent className="sm:max-w-[600px]">
           {bookingConfirmed ? (
@@ -593,7 +595,16 @@ const SearchDoctors = () => {
                 </TabsContent>
                 
                 <TabsContent value="step-2" className="space-y-4">
-                  <PaymentStep />
+                  {selectedDoctor && selectedDate && selectedTimeSlot && (
+                    <PaymentStep 
+                      onBack={handleBackBooking}
+                      onComplete={() => handleContinueBooking()}
+                      amount={parseInt(selectedDoctor.consultationPrice)}
+                      doctorName={selectedDoctor.name}
+                      appointmentDate={selectedDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                      appointmentTime={selectedTimeSlot}
+                    />
+                  )}
                 </TabsContent>
                 
                 <TabsContent value="step-3" className="space-y-4">

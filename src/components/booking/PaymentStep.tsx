@@ -9,7 +9,7 @@ import { Loader2, CreditCard, Calendar as CalendarIcon, Shield } from 'lucide-re
 interface PaymentStepProps {
   onBack: () => void;
   onComplete: () => void;
-  amount: number;
+  amount: number | string;
   doctorName: string;
   appointmentDate: string;
   appointmentTime: string;
@@ -31,6 +31,11 @@ const PaymentStep = ({
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Format amount for display
+  const displayAmount = typeof amount === 'number' 
+    ? `${amount} MAD` 
+    : amount.includes('MAD') ? amount : `${amount} MAD`;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -156,7 +161,7 @@ const PaymentStep = ({
           </div>
           <div className="flex justify-between pt-2 border-t mt-2">
             <span className="text-gray-600 font-medium">Total:</span>
-            <span className="text-tbibdaba-teal font-bold">{amount} MAD</span>
+            <span className="text-tbibdaba-teal font-bold">{displayAmount}</span>
           </div>
         </div>
         

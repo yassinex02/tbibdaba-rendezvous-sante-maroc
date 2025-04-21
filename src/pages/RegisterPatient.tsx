@@ -192,29 +192,43 @@ const RegisterPatient = () => {
     }
   };
 
-  // Check if form is valid for submission
+  // Check if form is valid for submission - Fixed logic to properly check required fields
   const isFormValid = () => {
-    const mandatoryFields = [
-      formData.name, 
-      formData.email, 
-      formData.password, 
-      formData.confirmPassword,
-      formData.phone,
-      formData.city,
-      formData.birthdate,
-      formData.gender,
-      formData.agreeTos
-    ];
+    // Check required fields
+    if (!formData.name || 
+        !formData.email || 
+        !formData.password || 
+        !formData.confirmPassword ||
+        !formData.phone ||
+        !formData.city ||
+        !formData.birthdate ||
+        !formData.gender ||
+        !formData.agreeTos) {
+      return false;
+    }
     
-    const basicFieldsValid = mandatoryFields.every(field => 
-      typeof field === 'boolean' ? field : Boolean(field)
-    );
+    // Check valid email format
+    if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      return false;
+    }
     
-    // Check if insurance is required to be valid
-    const insuranceFieldsPresent = formData.insuranceProvider || formData.insuranceNumber;
+    // Check password length
+    if (formData.password.length < 6) {
+      return false;
+    }
     
-    // Form is valid if all mandatory fields are valid AND either insurance is valid or not entered at all
-    return basicFieldsValid && (!insuranceFieldsPresent || insuranceValid);
+    // Check passwords match
+    if (formData.password !== formData.confirmPassword) {
+      return false;
+    }
+    
+    // Check insurance validation if both fields are provided
+    if (formData.insuranceProvider && formData.insuranceNumber) {
+      return insuranceValid;
+    }
+    
+    // If no insurance provided, or only one field is empty (which would be caught by validateForm)
+    return true;
   };
 
   return (

@@ -54,7 +54,8 @@ const doctorsData = [
     timeSlots: ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'],
     consultationPrice: '400 MAD',
     nextAvailable: 'Aujourd\'hui à 14:00',
-    cityType: 'urban'
+    cityType: 'urban',
+    acceptedInsurance: ['CNOPS', 'CNSS', 'RMA']
   },
   {
     id: '2',
@@ -75,7 +76,8 @@ const doctorsData = [
     timeSlots: ['09:30', '10:30', '11:30', '15:00', '16:00', '17:00'],
     consultationPrice: '350 MAD',
     nextAvailable: 'Demain à 09:30',
-    cityType: 'urban'
+    cityType: 'urban',
+    acceptedInsurance: ['CNOPS', 'AMO']
   },
   {
     id: '3',
@@ -96,7 +98,8 @@ const doctorsData = [
     timeSlots: ['10:00', '11:00', '12:00', '15:00', '16:00', '17:00'],
     consultationPrice: '450 MAD',
     nextAvailable: 'Dans 3 jours',
-    cityType: 'urban'
+    cityType: 'urban',
+    acceptedInsurance: ['CNSS', 'RMA', 'MAMDA']
   },
   {
     id: '4',
@@ -116,7 +119,8 @@ const doctorsData = [
     timeSlots: ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'],
     consultationPrice: '250 MAD',
     nextAvailable: 'Aujourd\'hui à 15:00',
-    cityType: 'rural'
+    cityType: 'rural',
+    acceptedInsurance: ['CNOPS', 'CNSS', 'AMO']
   },
   {
     id: '5',
@@ -137,7 +141,8 @@ const doctorsData = [
     timeSlots: ['09:00', '10:00', '11:00', '14:30', '15:30', '16:30'],
     consultationPrice: '400 MAD',
     nextAvailable: 'Dans 2 jours',
-    cityType: 'urban'
+    cityType: 'urban',
+    acceptedInsurance: ['CNOPS', 'AMO', 'RMA']
   },
   {
     id: '6',
@@ -212,7 +217,7 @@ const doctorsData = [
     image: '/placeholder.svg',
     rating: 4.2,
     reviewCount: 45,
-    about: 'Médecin de famille dévoué aux communautés rurales. Pratique une approche préventive et holistique.',
+    about: 'M��decin de famille dévoué aux communautés rurales. Pratique une approche préventive et holistique.',
     education: [
       { degree: 'Doctorat en Médecine', institution: 'Faculté de Médecine de Fès', year: '2012' }
     ],
@@ -358,6 +363,25 @@ const SearchDoctors = () => {
         reminderTime.setHours(reminderTime.getHours() - 2);
         
         console.log('Reminder scheduled for:', reminderTime);
+        
+        try {
+          const appointment = {
+            doctorId: selectedDoctor.id,
+            doctorName: selectedDoctor.name,
+            specialty: selectedDoctor.specialty,
+            date: selectedDate.toISOString(),
+            time: selectedTimeSlot,
+            status: 'confirmed'
+          };
+          
+          const existingAppointments = JSON.parse(localStorage.getItem('appointments') || '[]');
+          existingAppointments.push(appointment);
+          localStorage.setItem('appointments', JSON.stringify(existingAppointments));
+          
+          console.log('Appointment saved:', appointment);
+        } catch (error) {
+          console.error('Error saving appointment:', error);
+        }
       }
       
       setTimeout(() => {
@@ -366,6 +390,7 @@ const SearchDoctors = () => {
         setSelectedDate(undefined);
         setSelectedTimeSlot('');
         setBookingConfirmed(false);
+        navigate('/patient/appointments');
       }, 3000);
     }
   };
@@ -540,6 +565,7 @@ const SearchDoctors = () => {
                   {selectedDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} à {selectedTimeSlot}
                 </p>
               )}
+              <p className="text-sm text-gray-500 mt-4">Redirection vers vos rendez-vous...</p>
             </div>
           ) : (
             <>
@@ -561,7 +587,7 @@ const SearchDoctors = () => {
                       selected={selectedDate}
                       onSelect={setSelectedDate}
                       disabled={isDateDisabled}
-                      className="rounded-md border"
+                      className="rounded-md border mx-auto"
                     />
                   </div>
                   
@@ -590,6 +616,13 @@ const SearchDoctors = () => {
                         <div className="text-gray-500 text-sm">Prix de consultation</div>
                         <div className="font-medium">{selectedDoctor.consultationPrice}</div>
                       </div>
+                      
+                      {selectedDoctor.acceptedInsurance && selectedDoctor.acceptedInsurance.length > 0 && (
+                        <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-200">
+                          <div className="text-gray-500 text-sm">Assurances acceptées</div>
+                          <div className="font-medium">{selectedDoctor.acceptedInsurance.join(', ')}</div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </TabsContent>
@@ -601,7 +634,7 @@ const SearchDoctors = () => {
                       onComplete={() => handleContinueBooking()}
                       amount={parseInt(selectedDoctor.consultationPrice)}
                       doctorName={selectedDoctor.name}
-                      appointmentDate={selectedDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                      appointmentDate={selectedDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
                       appointmentTime={selectedTimeSlot}
                     />
                   )}
@@ -660,7 +693,13 @@ const SearchDoctors = () => {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={handleBackBooking}
+                  onClick={() => {
+                    if (bookingStep === 1) {
+                      setIsBookingOpen(false);
+                    } else {
+                      setBookingStep(prev => prev - 1);
+                    }
+                  }}
                 >
                   {bookingStep === 1 ? 'Annuler' : 'Retour'}
                 </Button>

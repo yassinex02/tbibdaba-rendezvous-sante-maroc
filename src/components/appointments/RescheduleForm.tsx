@@ -12,6 +12,7 @@ import {
 import { Clock, Calendar as CalendarIcon, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { toast } from '@/components/ui/use-toast';
 
 interface RescheduleFormProps {
   appointmentId: string;
@@ -51,12 +52,62 @@ const RescheduleForm = ({
   const handleSubmit = () => {
     if (selectedDate && selectedTime) {
       const formattedDate = format(selectedDate, 'yyyy-MM-dd');
-      onSubmit(appointmentId, formattedDate, selectedTime);
+      
+      // Store the rescheduled appointment in localStorage for demo purposes
+      try {
+        // First get existing appointments
+        const existingAppointments = JSON.parse(localStorage.getItem('appointments') || '[]');
+        
+        // Find and update the specific appointment
+        const updatedAppointments = existingAppointments.map((apt: any) => {
+          if (apt.id === appointmentId || (apt.doctorName === doctorName && apt.time === currentTime)) {
+            return {
+              ...apt,
+              date: formattedDate,
+              time: selectedTime,
+              rescheduled: true
+            };
+          }
+          return apt;
+        });
+        
+        // Save back to localStorage
+        localStorage.setItem('appointments', JSON.stringify(updatedAppointments));
+        
+        console.log('Appointment rescheduled:', {
+          appointmentId,
+          newDate: formattedDate,
+          newTime: selectedTime
+        });
+        
+        // Show success message
+        toast({
+          title: "Rendez-vous reprogrammé",
+          description: `Votre rendez-vous a été reprogrammé pour le ${formatDateForDisplay(selectedDate)} à ${selectedTime}`,
+          variant: "default",
+        });
+        
+        // Call the onSubmit function provided by the parent component
+        onSubmit(appointmentId, formattedDate, selectedTime);
+      } catch (error) {
+        console.error('Error rescheduling appointment:', error);
+        toast({
+          title: "Erreur",
+          description: "Une erreur s'est produite lors de la reprogrammation du rendez-vous",
+          variant: "destructive",
+        });
+      }
+    } else {
+      toast({
+        title: "Sélection incomplète",
+        description: "Veuillez sélectionner une date et un horaire",
+        variant: "destructive",
+      });
     }
   };
 
   return (
-    <Card>
+    <Card className="w-full mx-auto max-w-md">
       <CardHeader>
         <CardTitle className="text-xl">Reprogrammer le rendez-vous</CardTitle>
       </CardHeader>
@@ -79,14 +130,16 @@ const RescheduleForm = ({
             <label className="block text-sm font-medium mb-2">
               Nouvelle date
             </label>
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={setSelectedDate}
-              disabled={isDateDisabled}
-              className="rounded-md border bg-popover pointer-events-auto z-50"
-              aria-label="Sélectionner une nouvelle date"
-            />
+            <div className="mx-auto"> {/* Center the calendar */}
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={setSelectedDate}
+                disabled={isDateDisabled}
+                className="rounded-md border bg-popover p-3"
+                aria-label="Sélectionner une nouvelle date"
+              />
+            </div>
           </div>
           
           {selectedDate && (

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -174,13 +173,11 @@ const PatientAppointments = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Simulate API call
     const fetchAppointments = async () => {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       setAllAppointments(appointments);
       
-      // Filter upcoming and past appointments
       const now = new Date();
       const upcoming = appointments.filter(
         appt => (new Date(appt.date) >= now && appt.status !== 'cancelled') || 
@@ -195,14 +192,12 @@ const PatientAppointments = () => {
       setPastAppointments(past);
       setIsLoading(false);
       
-      // Initialize empty reviews array
       setReviews([]);
     };
     
     fetchAppointments();
   }, []);
 
-  // Filter appointments by selected date
   useEffect(() => {
     if (selectedDate) {
       const dateString = selectedDate.toISOString().split('T')[0];
@@ -220,7 +215,6 @@ const PatientAppointments = () => {
       setUpcomingAppointments(upcoming);
       setPastAppointments(past);
     } else {
-      // Reset to all appointments
       const now = new Date();
       const upcoming = allAppointments.filter(
         appt => (new Date(appt.date) >= now && appt.status !== 'cancelled') || 
@@ -237,14 +231,12 @@ const PatientAppointments = () => {
   }, [selectedDate, allAppointments]);
 
   const handleCancelAppointment = (id: string) => {
-    // In a real app, this would call an API to cancel the appointment
     const updatedAppointments = allAppointments.map(appt => 
       appt.id === id ? { ...appt, status: 'cancelled' } : appt
     );
     
     setAllAppointments(updatedAppointments);
     
-    // Update upcoming and past lists
     const updatedUpcoming = upcomingAppointments.filter(appt => appt.id !== id);
     const cancelledAppointment = allAppointments.find(appt => appt.id === id);
     
@@ -271,14 +263,12 @@ const PatientAppointments = () => {
   };
 
   const handleRescheduleSubmit = (appointmentId: string, newDate: string, newTime: string) => {
-    // In a real app, this would call an API to reschedule the appointment
     const updatedAppointments = allAppointments.map(appt => 
       appt.id === appointmentId ? { ...appt, date: newDate, time: newTime } : appt
     );
     
     setAllAppointments(updatedAppointments);
     
-    // Update the upcoming appointments list
     const updatedUpcoming = updatedAppointments.filter(
       appt => (new Date(appt.date) >= new Date() && appt.status !== 'cancelled') || 
       (appt.status === 'pending')
@@ -293,12 +283,10 @@ const PatientAppointments = () => {
       description: `Votre rendez-vous a été déplacé au ${new Date(newDate).toLocaleDateString('fr-FR')} à ${newTime}.`,
     });
     
-    // Schedule a reminder for the new appointment (2 hours before)
     scheduleReminder(appointmentId, newDate, newTime);
   };
 
   const handleReviewClick = (appointmentId: string, doctorId: string, doctorName: string) => {
-    // Check if a review already exists for this appointment
     const existingReview = reviews.find(review => review.appointmentId === appointmentId);
     
     if (existingReview) {
@@ -322,10 +310,9 @@ const PatientAppointments = () => {
     doctorId: string;
     appointmentId: string;
   }) => {
-    // In a real app, this would call an API to submit the review
     const newReview: Review = {
       id: `review-${Math.random().toString(36).substr(2, 9)}`,
-      patientId: 'current-patient-id', // In a real app, this would be the actual patient ID
+      patientId: 'current-patient-id',
       date: new Date().toISOString(),
       ...reviewData,
     };
@@ -339,22 +326,16 @@ const PatientAppointments = () => {
       description: "Merci d'avoir partagé votre expérience!",
     });
     
-    // In a real app, you would also update the doctor's rating in the database
     console.log('New review submitted:', newReview);
   };
 
   const scheduleReminder = (appointmentId: string, date: string, time: string) => {
-    // Parse the date and time to create a reminder 2 hours before
     const appointmentDateTime = new Date(`${date}T${time}`);
     const reminderTime = new Date(appointmentDateTime.getTime() - 2 * 60 * 60 * 1000);
     
     console.log(`Reminder scheduled for ${reminderTime.toLocaleString()} for appointment ${appointmentId}`);
-    
-    // In a real app, this would store the reminder in a database and trigger actual notifications
-    // For now, we just log it to the console
   };
 
-  // Mock available time slots for rescheduling
   const availableTimeSlots = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
 
   return (

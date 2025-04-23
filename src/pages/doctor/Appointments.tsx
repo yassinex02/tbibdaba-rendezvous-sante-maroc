@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { doctorAppointments } from '../../lib/mock-data';
 import { toast } from "@/components/ui/use-toast";
 import { format } from 'date-fns';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface Appointment {
   id: string;
@@ -132,7 +134,7 @@ const DoctorAppointments = () => {
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [showCalendarDropdown, setShowCalendarDropdown] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const handleCreateAppointment = () => {
     toast({
@@ -270,34 +272,36 @@ const DoctorAppointments = () => {
                   </div>
                   
                   <div className="grid w-full max-w-sm items-center gap-1.5">
-                    <div className="relative">
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowCalendarDropdown(!showCalendarDropdown)}
-                        className="w-full justify-start text-left font-normal"
-                      >
-                        <Calendar className="mr-2 h-4 w-4" />
-                        {formatDateForDisplay(selectedDate)}
-                      </Button>
-                      {showCalendarDropdown && (
-                        <div className="absolute z-50 mt-1 rounded-md border bg-white shadow-lg">
-                          <Calendar
-                            mode="single"
-                            selected={selectedDate}
-                            onSelect={(date) => {
-                              setSelectedDate(date);
-                              setShowCalendarDropdown(false);
-                            }}
-                            className="rounded-md border"
-                            initialFocus
-                          />
-                        </div>
-                      )}
-                    </div>
+                    <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start text-left font-normal"
+                        >
+                          <Calendar className="mr-2 h-4 w-4" />
+                          {formatDateForDisplay(selectedDate)}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="p-0 w-auto">
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={(date) => {
+                            setSelectedDate(date);
+                            setCalendarOpen(false);
+                          }}
+                          className="rounded-md border"
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   
                   <div>
-                    <Button variant="ghost" onClick={clearFilters}>
+                    <Button variant="ghost" onClick={() => {
+                      clearFilters();
+                      setCalendarOpen(false);
+                    }}>
                       Réinitialiser
                     </Button>
                   </div>
@@ -348,7 +352,7 @@ const DoctorAppointments = () => {
                   mode="single" 
                   selected={selectedDate} 
                   onSelect={setSelectedDate}
-                  className="rounded-md border"
+                  className="rounded-md border" 
                 />
               </CardContent>
             </Card>

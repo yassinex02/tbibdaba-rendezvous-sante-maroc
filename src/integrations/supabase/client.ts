@@ -14,5 +14,14 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
+    debug: true, // Enable debug logging to diagnose auth issues
   }
+});
+
+// Log config for debugging
+console.log("Supabase URL:", SUPABASE_URL);
+console.log("Supabase Auth Configuration:", {
+  storage: "localStorage",
+  persistSession: true,
+  autoRefreshToken: true
 });

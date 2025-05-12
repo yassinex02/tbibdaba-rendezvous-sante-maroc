@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -289,7 +290,7 @@ const DoctorAppointments = () => {
                             setSelectedDate(date);
                             setCalendarOpen(false);
                           }}
-                          className="rounded-md border"
+                          className="rounded-md border shadow-none"
                           initialFocus
                         />
                       </PopoverContent>
@@ -347,12 +348,12 @@ const DoctorAppointments = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex justify-center py-8">
-                <div className="relative">
+                <div className="relative bg-white rounded-md border">
                   <Calendar 
                     mode="single" 
                     selected={selectedDate} 
                     onSelect={setSelectedDate}
-                    className="rounded-md border" 
+                    className="shadow-none" 
                   />
                 </div>
               </CardContent>

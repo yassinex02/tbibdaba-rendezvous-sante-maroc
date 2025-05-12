@@ -282,17 +282,19 @@ const DoctorAppointments = () => {
                           {formatDateForDisplay(selectedDate)}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="p-0 w-auto">
-                        <Calendar
-                          mode="single"
-                          selected={selectedDate}
-                          onSelect={(date) => {
-                            setSelectedDate(date);
-                            setCalendarOpen(false);
-                          }}
-                          className="rounded-md border"
-                          initialFocus
-                        />
+                      <PopoverContent className="p-0 w-auto" align="start">
+                        <div className="z-50 pointer-events-auto">
+                          <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={(date) => {
+                              setSelectedDate(date);
+                              setCalendarOpen(false);
+                            }}
+                            className="rounded-md border"
+                            initialFocus
+                          />
+                        </div>
                       </PopoverContent>
                     </Popover>
                   </div>
@@ -348,12 +350,14 @@ const DoctorAppointments = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex justify-center py-8">
-                <Calendar 
-                  mode="single" 
-                  selected={selectedDate} 
-                  onSelect={setSelectedDate}
-                  className="rounded-md border" 
-                />
+                <div className="pointer-events-auto z-10">
+                  <Calendar 
+                    mode="single" 
+                    selected={selectedDate} 
+                    onSelect={setSelectedDate}
+                    className="rounded-md border" 
+                  />
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

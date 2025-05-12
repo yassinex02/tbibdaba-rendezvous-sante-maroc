@@ -14,14 +14,29 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
-    debug: true, // Enable debug logging to diagnose auth issues
-  }
+    debug: false, // Disable debug logging in production
+  },
+  global: {
+    // Enable for better debugging visibility during development
+    fetch: (...args) => {
+      console.log('Supabase Fetch:', args[0]);
+      return fetch(...args);
+    },
+  },
 });
 
-// Log config for debugging
-console.log("Supabase URL:", SUPABASE_URL);
-console.log("Supabase Auth Configuration:", {
-  storage: "localStorage",
-  persistSession: true,
-  autoRefreshToken: true
-});
+// Helper function to check if connection is working
+export const checkSupabaseConnection = async () => {
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    console.log("Supabase connection check:", error ? "Failed" : "Success");
+    console.log("Session status:", data.session ? "Active" : "No active session");
+    return !error;
+  } catch (e) {
+    console.error("Supabase connection error:", e);
+    return false;
+  }
+};
+
+// Initialize connection check
+checkSupabaseConnection();

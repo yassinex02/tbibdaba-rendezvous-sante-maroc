@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Clock, Phone, Calendar, Star, Shield } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Doctor {
   id: string;
@@ -15,7 +16,7 @@ interface Doctor {
   reviewCount: number;
   availableDays: string[];
   timeSlots: string[];
-  acceptedInsurance?: string[]; // Add accepted insurance
+  acceptedInsurance?: string[];
 }
 
 interface DoctorCardProps {
@@ -28,20 +29,30 @@ const DoctorCard = ({ doctor, onBookAppointment, onViewProfile }: DoctorCardProp
   // Find the next available slot (first item in timeSlots)
   const nextAvailableSlot = doctor.timeSlots[0];
   
+  // Get doctor's initials for the avatar fallback
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase();
+  };
+  
   return (
     <div className="doctor-card border rounded-lg shadow-sm mb-4 overflow-hidden">
       <div className="p-6">
         <div className="flex flex-col md:flex-row">
           <div className="w-full md:w-auto mb-4 md:mb-0 md:mr-6">
-            <img 
-              src={doctor.image || "/placeholder.svg"} 
-              alt={`Dr. ${doctor.name}`} 
-              className="w-full md:w-32 md:h-32 rounded-md object-cover hover:scale-105 transition-transform duration-300"
-              onError={(e) => {
-                // Fallback to placeholder if image fails to load
-                (e.target as HTMLImageElement).src = "/placeholder.svg";
-              }}
-            />
+            <Avatar className="w-32 h-32 rounded-md">
+              <AvatarImage
+                src={doctor.image} 
+                alt={`Dr. ${doctor.name}`}
+                className="object-cover hover:scale-105 transition-transform duration-300"
+              />
+              <AvatarFallback className="text-xl bg-tbibdaba-light text-tbibdaba-teal w-32 h-32 rounded-md">
+                {getInitials(doctor.name)}
+              </AvatarFallback>
+            </Avatar>
           </div>
           
           <div className="flex-1">
@@ -114,13 +125,22 @@ const DoctorCard = ({ doctor, onBookAppointment, onViewProfile }: DoctorCardProp
               </div>
             </div>
             
-            {/* Add insurance information */}
+            {/* Add insurance information with improved visibility */}
             {doctor.acceptedInsurance && doctor.acceptedInsurance.length > 0 && (
-              <div className="mt-3 flex items-center">
-                <Shield className="h-4 w-4 mr-2 text-gray-400" />
-                <span className="text-sm text-gray-700">
-                  <strong>Assurances acceptées:</strong> {doctor.acceptedInsurance.join(', ')}
-                </span>
+              <div className="mt-3 border-t pt-3 border-gray-100">
+                <div className="flex items-center">
+                  <Shield className="h-4 w-4 mr-2 text-tbibdaba-teal/70" />
+                  <span className="text-sm font-medium text-gray-700">
+                    Assurances acceptées:
+                  </span>
+                </div>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {doctor.acceptedInsurance.map((insurance, index) => (
+                    <Badge key={index} variant="secondary" className="bg-gray-100">
+                      {insurance}
+                    </Badge>
+                  ))}
+                </div>
               </div>
             )}
           </div>

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -283,18 +282,16 @@ const DoctorAppointments = () => {
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="p-0 w-auto" align="start">
-                        <div className="z-50 pointer-events-auto">
-                          <Calendar
-                            mode="single"
-                            selected={selectedDate}
-                            onSelect={(date) => {
-                              setSelectedDate(date);
-                              setCalendarOpen(false);
-                            }}
-                            className="rounded-md border"
-                            initialFocus
-                          />
-                        </div>
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={(date) => {
+                            setSelectedDate(date);
+                            setCalendarOpen(false);
+                          }}
+                          className="rounded-md border"
+                          initialFocus
+                        />
                       </PopoverContent>
                     </Popover>
                   </div>
@@ -350,7 +347,7 @@ const DoctorAppointments = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex justify-center py-8">
-                <div className="pointer-events-auto z-10">
+                <div className="relative">
                   <Calendar 
                     mode="single" 
                     selected={selectedDate} 

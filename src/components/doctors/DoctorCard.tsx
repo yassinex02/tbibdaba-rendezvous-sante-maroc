@@ -45,7 +45,7 @@ const DoctorCard = ({ doctor, onBookAppointment, onViewProfile }: DoctorCardProp
           <div className="w-full md:w-auto mb-4 md:mb-0 md:mr-6">
             <Avatar className="w-32 h-32 rounded-md">
               <AvatarImage
-                src={doctor.image} 
+                src={doctor.image || "/placeholder.svg"} 
                 alt={`Dr. ${doctor.name}`}
                 className="object-cover hover:scale-105 transition-transform duration-300"
               />
@@ -125,7 +125,7 @@ const DoctorCard = ({ doctor, onBookAppointment, onViewProfile }: DoctorCardProp
               </div>
             </div>
             
-            {/* Add insurance information with improved visibility */}
+            {/* Insurance information */}
             {doctor.acceptedInsurance && doctor.acceptedInsurance.length > 0 && (
               <div className="mt-3 border-t pt-3 border-gray-100">
                 <div className="flex items-center">

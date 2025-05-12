@@ -18,9 +18,9 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   },
   global: {
     // Enable for better debugging visibility during development
-    fetch: (...args) => {
-      console.log('Supabase Fetch:', args[0]);
-      return fetch(...args);
+    fetch: (url, options) => {
+      console.log('Supabase Fetch:', url);
+      return fetch(url, options);
     },
   },
 });
